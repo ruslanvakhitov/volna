@@ -82,7 +82,7 @@ public func volnaScreenCapture(_ expectedPID: Int32) -> UnsafeMutablePointer<CCh
             config.height = Int(display.frame.height * scale)
             config.showsCursor = false
             let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
-            // Keep the exact pixels OCR saw for the retained dictation's History.
+            // Keep a local JPEG preview of the image OCR saw for this dictation.
             let data = NSMutableData()
             var jpeg: String? = nil
             if let destination = CGImageDestinationCreateWithData(data, "public.jpeg" as CFString, 1, nil) {

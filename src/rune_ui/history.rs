@@ -258,7 +258,7 @@ impl HistoryPane {
             ..Default::default()
         });
         let cache = rune::ImageCache::new(std::sync::Arc::new(|| {}));
-        let image = cache.load(include_bytes!("../../tests/fixtures/volna-context.svg").as_slice());
+        let image = cache.load(include_bytes!("../../tests/fixtures/volna-context.png").as_slice());
         let _ = image.wait();
         pane.context_image = Some((2, image));
         pane
