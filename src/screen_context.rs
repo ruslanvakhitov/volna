@@ -1,8 +1,9 @@
 //! Volna's local screen context. Only an intentional contextual shortcut
 //! captures a screen; ordinary dictation reads the current app's dictionary.
-//! Pixels and OCR excerpts are transient. Only bounded, expiring terms persist.
+//! Retained dictations keep their screen evidence in local History.
 
 mod engine;
+mod evidence;
 mod phonetic;
 mod store;
 #[cfg(test)]
@@ -90,6 +91,7 @@ struct SessionInner {
     ready: Condvar,
     terms: Vec<String>,
     generation: u64,
+    trace: Mutex<Option<crate::history::context::Draft>>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -100,6 +102,10 @@ pub struct ScreenText {
     pub elapsed_ms: u64,
     #[serde(default)]
     pub error: Option<String>,
+    #[serde(default, skip_serializing)]
+    pub screenshot_jpeg: Option<String>,
+    #[serde(default)]
+    pub screenshot_note: Option<String>,
 }
 
 /// Reads only the foreground application's identity, not its UI or screen.
@@ -144,6 +150,7 @@ pub fn begin(context: &ContextSnapshot, capture: bool) -> ContextSnapshot {
     context.screen = Some(Session(Arc::new(SessionInner {
         terms: store::terms(&scope),
         generation: store::generation(),
+        trace: Mutex::new(None),
         scope,
         application,
         pid,
@@ -211,7 +218,16 @@ impl Session {
                 .unwrap_or_else(|e| e.into_inner())
                 .0;
         }
-        let screen = state.clone().unwrap_or_default();
+        let screen = state.clone().unwrap_or_else(|| ScreenText {
+            error: self.0.capture.then(|| {
+                if self.0.started.load(Ordering::Acquire) {
+                    "Screen reading did not finish before correction; saved dictionary used".into()
+                } else {
+                    "Screen reading was not started".into()
+                }
+            }),
+            ..Default::default()
+        });
         let mut terms = store::extract_terms(&screen.text);
         for term in &self.0.terms {
             if !terms.iter().any(|t| t.eq_ignore_ascii_case(term)) {
@@ -228,6 +244,14 @@ pub fn correct(transcript: &str, context: &ContextSnapshot, cancelled: &AtomicBo
         return transcript.into();
     };
     if !settings().enabled || cancelled.load(Ordering::Acquire) {
+        session.trace(
+            &ScreenText::default(),
+            &[],
+            transcript,
+            transcript,
+            "Screen context is disabled",
+            0,
+        );
         return transcript.into();
     }
     let started = Instant::now();
@@ -235,18 +259,62 @@ pub fn correct(transcript: &str, context: &ContextSnapshot, cancelled: &AtomicBo
         tracing::warn!(%error, "Could not expire app vocabulary");
     }
     let (screen, terms) = session.resolve();
-    if let Some(error) = screen.error {
-        engine::set_note(&error);
+    if let Some(error) = &screen.error {
+        engine::set_note(error);
     }
     if terms.is_empty() {
+        session.trace(
+            &screen,
+            &terms,
+            transcript,
+            transcript,
+            "No context terms available; transcript unchanged",
+            0,
+        );
         return transcript.into();
     }
     let corrected = store::exact_spellings(transcript, &terms);
     if !settings().rewrite {
+        session.trace(
+            &screen,
+            &terms,
+            transcript,
+            &corrected,
+            "Local model is off; dictionary spelling only",
+            0,
+        );
+        return corrected;
+    }
+    if transcript.chars().count() > 5000 || phonetic::candidates(&corrected, &terms).is_empty() {
+        let status = if transcript.chars().count() > 5000 {
+            "Transcript exceeds local model limit; dictionary spelling only"
+        } else {
+            "No phonetic candidates; dictionary spelling only"
+        };
+        session.trace(
+            &screen,
+            &terms,
+            transcript,
+            &corrected,
+            status,
+            started.elapsed().as_millis() as u64,
+        );
         return corrected;
     }
     match engine::correct(&corrected, &screen.text, &terms, cancelled) {
         Ok(text) => {
+            session.trace(
+                &screen,
+                &terms,
+                transcript,
+                &text,
+                if text == transcript {
+                    "Qwen checked candidates and kept the transcript unchanged"
+                } else {
+                    "Context spelling corrections applied"
+                },
+                started.elapsed().as_millis() as u64,
+            );
             tracing::info!(
                 latency_ms = started.elapsed().as_millis() as u64,
                 ocr_ms = screen.elapsed_ms,
@@ -256,6 +324,14 @@ pub fn correct(transcript: &str, context: &ContextSnapshot, cancelled: &AtomicBo
             text
         }
         Err(error) => {
+            session.trace(
+                &screen,
+                &terms,
+                transcript,
+                &corrected,
+                &error,
+                started.elapsed().as_millis() as u64,
+            );
             engine::set_note(&error);
             corrected
         }

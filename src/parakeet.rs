@@ -138,6 +138,7 @@ struct CompletedTranscript {
     timings: JobTimings,
     processing: Option<ProcessingObservation>,
     recording: Option<crate::history::Recording>,
+    screen_context: Option<crate::screen_context::Session>,
 }
 
 enum OutputJob {
@@ -607,6 +608,7 @@ fn run_processor_worker(
                     timings: job.timings,
                     processing: processed.observation,
                     recording: job.recording,
+                    screen_context: job.context.screen,
                 })),
             })
             .is_err()
@@ -811,6 +813,7 @@ fn run_inference_worker(
             }
             result => {
                 let application = job.context.application;
+                let screen_context = job.context.screen;
                 let recording = job.recording;
                 let result = result.map(|text| CompletedTranscript {
                     raw: text.clone(),
@@ -819,6 +822,7 @@ fn run_inference_worker(
                     timings,
                     processing: None,
                     recording,
+                    screen_context,
                 });
                 if output
                     .send(OutputJob::Completed {
@@ -1077,6 +1081,10 @@ fn record_history(
         inference_ms: completed.timings.inference_ms as u64,
         total_ms: completed.timings.total_started.elapsed().as_millis() as u64,
         recording: completed.recording.take(),
+        screen_context: completed
+            .screen_context
+            .as_ref()
+            .map(|session| session.history(&completed.raw)),
     };
     if let Err(error) = history.record(draft) {
         tracing::warn!(%error, "could not record dictation history");

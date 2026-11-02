@@ -40,8 +40,17 @@ arbitrary replacement prose or edit digits. Raw dictation bypasses correction.
 Existing configured Output transformations run afterward as before. OCR text is
 not added to an external-provider prompt by this feature.
 
-Only candidate terms are persisted in `app-vocabulary.json`; screenshots and OCR
-excerpts exist only in the in-flight session. Dictionaries are keyed by bundle ID,
+Candidate terms persist in `app-vocabulary.json`. Since Volna 0.1.1, each retained
+dictation also keeps its exact screenshot as an owner-only JPEG under
+`history-screens/<id>.jpg`, OCR excerpt, before/after text, available terms,
+application ID, timings and correction/fallback status. History Off stops saving
+new evidence; retention, Delete, Clear and text-cap eviction remove the attached
+JPEG. A separate 128 MiB cap evicts oldest screenshots first while keeping text.
+The History detail pane previews the screenshot and opens its full-size local
+file. Old entries have no retroactive evidence. OCR that missed the processing
+deadline is not presented as if correction used it. Option entries explicitly
+say that no screenshot was requested and list their app dictionary terms.
+Dictionaries are keyed by bundle ID,
 with 64 apps and 256 terms per app. Each term expires 30 days after it was last seen;
 expired terms are filtered immediately and removed on subsequent processing/startup.
 Writes use owner-only temporary files and atomic replacement. Forgetting an app

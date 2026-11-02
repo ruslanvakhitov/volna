@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+ <rect width="960" height="540" fill="#192523"/>
+ <rect x="20" y="20" width="920" height="48" rx="12" fill="#2c3935"/>
+ <g fill="#dceee6" font-family="sans-serif"><text x="44" y="52" font-size="22">Fixture · Project discussion</text>
+ <text x="70" y="190" font-size="42">ConfidAI and Codex</text>
+ <text x="70" y="260" font-size="28">Meeting at 15:00</text>
+ <text x="70" y="455" font-size="20" fill="#a2b8ac">Synthetic screen for History preview</text></g>
+</svg>

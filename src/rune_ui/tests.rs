@@ -1198,6 +1198,30 @@ fn history_copy_writes_the_clipboard() {
 }
 
 #[test]
+fn history_context_shows_raw_final_ocr_and_screen_evidence() {
+    let mut rt = runtime("history-context", true, PANE_SIZE);
+    let shown = texts(&mut rt);
+    for expected in [
+        "After · inserted text",
+        "Before · raw transcript",
+        "Screen context · evidence",
+        "Обсудим конфидай и кодекс завтра в 15 часов.",
+        "Обсудим ConfidAI и Codex завтра в 15 часов.",
+    ] {
+        assert!(shown.iter().any(|s| s == expected), "missing {expected}");
+    }
+    assert!(
+        rt.state
+            .history
+            .context_image
+            .as_ref()
+            .unwrap()
+            .1
+            .is_ready()
+    );
+}
+
+#[test]
 fn history_search_without_matches_says_so() {
     use crate::history::{History, HistoryDraft, HistoryKind, HistoryRetention, HistoryStore};
     let directory = std::env::temp_dir().join(format!("hex-rune-history-{}", std::process::id()));
@@ -1220,6 +1244,7 @@ fn history_search_without_matches_says_so() {
             inference_ms: 80,
             total_ms: 200,
             recording: None,
+            screen_context: None,
         })
         .unwrap();
     let mut rt = runtime("history-empty", true, PANE_SIZE);
@@ -1265,6 +1290,7 @@ fn transcribe_again_shows_only_with_its_lab_and_replace_updates_the_entry() {
         inference_ms: 80,
         total_ms: 200,
         recording,
+        screen_context: None,
     };
     let plain = history.record(draft(None)).unwrap().unwrap();
     let id = history

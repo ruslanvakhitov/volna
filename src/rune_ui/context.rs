@@ -58,7 +58,7 @@ pub(super) fn section(ui: &Ui, p: Paint) -> Option<El> {
             "screen-context-learning",
             &BOOK,
             tr("Learn app vocabulary"),
-            tr("Only terms are saved on this Mac, for 30 days. Screenshots are never saved."),
+            tr("App terms stay 30 days. Screenshots and OCR follow your History retention."),
             settings.learn,
             |ui| update(ui, |s| s.learn = !s.learn),
         )

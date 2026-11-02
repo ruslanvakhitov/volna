@@ -14,10 +14,10 @@ python3 - "$bundle/Contents/Info.plist" <<'PY'
 import sys, plistlib
 p=sys.argv[1]
 with open(p,'rb') as f: d=plistlib.load(f)
-d.update(CFBundleName='Volna',CFBundleDisplayName='Volna',CFBundleIdentifier='com.ruslan.volna',CFBundleExecutable='volna',CFBundleShortVersionString='0.1.0',CFBundleVersion='100')
+d.update(CFBundleName='Volna',CFBundleDisplayName='Volna',CFBundleIdentifier='com.ruslan.volna',CFBundleExecutable='volna',CFBundleShortVersionString='0.1.1',CFBundleVersion='101')
 d.pop('CFBundleIconName',None)
 d['CFBundleURLTypes']=[{'CFBundleURLName':'com.ruslan.volna','CFBundleURLSchemes':['volna']}]
-d['NSScreenCaptureUsageDescription']='Volna reads screen text locally only for contextual dictation. Screenshots are not saved.'
+d['NSScreenCaptureUsageDescription']='Volna reads screen text locally only for contextual dictation. Screenshots and extracted text stay locally with retained dictation History.'
 with open(p,'wb') as f: plistlib.dump(d,f)
 PY
 # Include the local inference runtime when it is installed on the build Mac.

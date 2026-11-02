@@ -22,6 +22,7 @@ mod found_choice;
 mod fun;
 mod general;
 mod history;
+mod history_context;
 #[cfg_attr(target_os = "linux", path = "rune_ui/linux_host.rs")]
 #[cfg_attr(target_os = "windows", path = "rune_ui/windows_host.rs")]
 #[cfg_attr(target_os = "macos", path = "rune_ui/macos_host.rs")]

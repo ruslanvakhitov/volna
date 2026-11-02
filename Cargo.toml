@@ -44,6 +44,7 @@ transcribe-cpp = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7
 transcribe-cpp-sys = { git = "https://github.com/anomalyco/transcribe.cpp", rev = "7045d1c0fe7cee37747b2792977421d435e75fca" }
 
 [dependencies]
+base64 = "0.22.1"
 clap = { version = "4.6.7", features = ["derive"] }
 color-eyre = "0.6.5"
 cpal = "0.18.2"

@@ -36,6 +36,9 @@ pub(super) struct HistoryPane {
     models: Vec<(TranscriptionModelId, &'static str)>,
     /// The latest Transcribe again, for one entry.
     pub(super) again: Option<Again>,
+    pub(super) context_image: Option<(u64, rune::Image)>,
+    images: Option<rune::ImageCache>,
+    image_ready: bool,
 }
 
 /// One entry's recording transcribed again with another model.
@@ -63,6 +66,9 @@ impl Again {
 }
 
 impl HistoryPane {
+    pub(super) fn screenshot_path(&self, id: u64) -> Option<std::path::PathBuf> {
+        self.store.as_ref()?.screenshot_path(id)
+    }
     /// The host's store; `None` when it could not open one.
     pub(super) fn shared(store: Option<History>) -> Self {
         Self {
@@ -112,12 +118,41 @@ impl HistoryPane {
         }
         let previous = std::mem::take(&mut self.entries);
         self.reload_entries();
-        let changed = self.entries != previous;
+        let changed = (self.entries != previous) | self.poll_image();
         if changed || self.stats.is_some() != crate::labs::history_stats() {
             self.reload_stats();
             return true;
         }
         answered
+    }
+
+    fn poll_image(&mut self) -> bool {
+        let id = self.selected.filter(|id| {
+            self.entry(*id).is_some_and(|entry| {
+                entry
+                    .screen_context
+                    .as_ref()
+                    .is_some_and(|c| c.screenshot_bytes > 0)
+            })
+        });
+        let mut changed = false;
+        if self.context_image.as_ref().map(|(id, _)| *id) != id {
+            self.context_image = id.and_then(|id| {
+                let path = self.store.as_ref()?.screenshot_path(id)?;
+                let cache = self
+                    .images
+                    .get_or_insert_with(|| rune::ImageCache::new(std::sync::Arc::new(|| {})));
+                Some((id, cache.file(path, 800.0, 1.0)))
+            });
+            changed = true;
+        }
+        let ready = self
+            .context_image
+            .as_ref()
+            .is_some_and(|(_, image)| image.is_ready());
+        changed |= ready != self.image_ready;
+        self.image_ready = ready;
+        changed
     }
 
     /// Takes Transcribe again's answer once its worker sends it.
@@ -155,6 +190,7 @@ impl HistoryPane {
                     inference_ms: 180,
                     total_ms: 640,
                     recording_bytes: 0,
+                    screen_context: None,
                 }
             };
         let mut rewritten = entry(
@@ -197,6 +233,35 @@ impl HistoryPane {
 
     pub(super) fn fixture_empty() -> Self {
         Self::default()
+    }
+
+    pub(super) fn fixture_context() -> Self {
+        let mut pane = Self::fixture();
+        let entry = &mut pane.entries[1];
+        entry.application = Some("Telegram".into());
+        entry.raw_text = "Обсудим конфидай и кодекс завтра в 15 часов.".into();
+        entry.final_text = "Обсудим ConfidAI и Codex завтра в 15 часов.".into();
+        entry.processing = None;
+        entry.screen_context = Some(crate::history::context::Evidence {
+            contextual: true,
+            application_id: "org.telegram.desktop".into(),
+            ocr_text: "Project discussion\nConfidAI and Codex\nMeeting at 15:00".into(),
+            ocr_status: "Screen text was available to correction".into(),
+            ocr_ms: 457,
+            correction_status: "Context spelling corrections applied".into(),
+            correction_ms: 350,
+            before: entry.raw_text.clone(),
+            after: entry.final_text.clone(),
+            terms: vec!["ConfidAI".into(), "Codex".into()],
+            saved_terms: 12,
+            screenshot_bytes: 100,
+            ..Default::default()
+        });
+        let cache = rune::ImageCache::new(std::sync::Arc::new(|| {}));
+        let image = cache.load(include_bytes!("../../tests/fixtures/volna-context.svg").as_slice());
+        let _ = image.wait();
+        pane.context_image = Some((2, image));
+        pane
     }
 }
 
@@ -595,19 +660,21 @@ fn detail(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> El {
         facts.push((tr("Processing"), summary));
     }
     facts.push((tr("Latency"), latency));
-    let mut body = col().key("detail-body").gap(20.0).child(
-        text(entry.final_text.clone())
-            .key("final")
-            .font(p.k.ty.body)
-            .color(p.text())
-            .wrap(),
-    );
-    if entry.raw_text.trim() != entry.final_text.trim() {
+    let mut body = col()
+        .key("detail-body")
+        .gap(20.0)
+        .child(super::history_context::transcript(
+            p,
+            "final",
+            tr("After · inserted text"),
+            &entry.final_text,
+        ));
+    if entry.screen_context.is_some() || entry.raw_text.trim() != entry.final_text.trim() {
         body = body.child(
             col()
                 .key("raw")
                 .gap(6.0)
-                .child(section_label(p, "label", tr("Raw transcript")))
+                .child(section_label(p, "label", tr("Before · raw transcript")))
                 .child(
                     text(entry.raw_text.clone())
                         .key("value")
@@ -615,6 +682,19 @@ fn detail(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> El {
                         .color(p.muted())
                         .wrap(),
                 ),
+        );
+    }
+    if let Some(context) = &entry.screen_context {
+        body = body.child(super::history_context::detail(ui, p, id, context));
+    } else {
+        body = body.child(
+            text(tr(
+                "No screen-context evidence was recorded for this entry.",
+            ))
+            .key("no-context-evidence")
+            .font(p.k.ty.small)
+            .color(p.muted())
+            .wrap(),
         );
     }
     body = body.child(ld::facts(p, facts));

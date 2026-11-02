@@ -643,6 +643,7 @@ Completed output                         // output
 │   └── Last completed dictation
 └── History
     ├── Inspect / search / copy (row hover or the card) / delete
+    ├── Volna: screenshot + OCR + context correction before/after and failure status (screen-context.md)
     ├── Retention ("Keep: 7 days" menu) -> Seven days by default, always hard-capped
     ├── Off -> Stop new entries; preserve existing entries
     └── Labs > Keep recordings (off) -> new entries keep their 16 kHz audio   // labs.keep-recordings

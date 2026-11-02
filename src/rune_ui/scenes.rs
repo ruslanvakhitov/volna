@@ -81,6 +81,11 @@ pub(super) const SCENES: &[Scene] = &[
         ui.history = history::HistoryPane::fixture_empty();
         ui.pane = Pane::History;
     }),
+    ("history-context", |ui| {
+        *ui = portal_fixture();
+        ui.history = history::HistoryPane::fixture_context();
+        ui.pane = Pane::History;
+    }),
     ("output", |ui| {
         *ui = portal_fixture();
         output::fixture(ui);

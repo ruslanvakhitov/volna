@@ -9,8 +9,12 @@ An independently branded macOS fork of [Hex](https://github.com/anomalyco/hex).
 - **Per-app dictionaries**: terms learned in Telegram stay with Telegram. The
   screen excerpt helps correct names and technical vocabulary after speech recognition.
 - **Local processing**: Apple Vision OCR and Qwen3.5-0.8B through a private,
-  cloud-disabled Ollama runtime. No API key. Screenshots and OCR excerpts are not
-  saved; learned terms stay in owner-only files and expire after 30 days.
+  cloud-disabled Ollama runtime. No API key. History keeps the screenshot, extracted text, available terms and
+  the before/after correction locally for each retained dictation. Screenshots
+  follow History retention and a 128 MiB cap. Learned app terms expire after 30 days.
+- **Inspectable results**: History shows OCR errors, deadlines, dictionary-only
+  fallback and unchanged results, as well as corrections. Existing records cannot
+  recover screenshots from earlier versions. Turning History Off stops new evidence.
 - **New identity**: wave icon, sea-glass theme, voice ribbon, glass-ripple sounds.
 
 This version targets Apple silicon on macOS. Give Volna its own Microphone,

@@ -8,6 +8,8 @@ private struct OCRResult: Codable {
     var text = ""
     var elapsed_ms: UInt64 = 0
     var error: String? = nil
+    var screenshot_jpeg: String? = nil
+    var screenshot_note: String? = nil
 }
 
 private func encode(_ result: OCRResult) -> UnsafeMutablePointer<CChar>? {
@@ -80,7 +82,22 @@ public func volnaScreenCapture(_ expectedPID: Int32) -> UnsafeMutablePointer<CCh
             config.height = Int(display.frame.height * scale)
             config.showsCursor = false
             let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
-            box.set(try recognize(image))
+            // Keep the exact pixels OCR saw for the retained dictation's History.
+            let data = NSMutableData()
+            var jpeg: String? = nil
+            if let destination = CGImageDestinationCreateWithData(data, "public.jpeg" as CFString, 1, nil) {
+                CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.78] as CFDictionary)
+                if CGImageDestinationFinalize(destination), data.length <= 6 * 1024 * 1024 {
+                    jpeg = (data as Data).base64EncodedString()
+                }
+            }
+            var result: OCRResult
+            box.set(OCRResult(error: "Screen captured, but OCR did not finish before its deadline", screenshot_jpeg: jpeg))
+            do { result = try recognize(image) }
+            catch { result = OCRResult(error: "Vision could not recognize screen text") }
+            result.screenshot_jpeg = jpeg
+            if jpeg == nil { result.screenshot_note = "Screenshot preview could not be encoded or exceeded 6 MiB" }
+            box.set(result)
         } catch { box.set(OCRResult(error: "Could not read screen text; check Screen Recording permission")) }
     }
     _ = done.wait(timeout: .now() + 3.0)

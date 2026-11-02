@@ -17,6 +17,7 @@ use std::time::{Duration, SystemTime};
 
 use serde::{Deserialize, Serialize};
 
+pub mod context;
 pub mod recordings;
 pub mod stats;
 
@@ -123,6 +124,8 @@ pub struct HistoryEntry {
     /// when it has none.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub recording_bytes: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screen_context: Option<context::Evidence>,
 }
 
 fn is_zero(value: &u64) -> bool {
@@ -136,7 +139,12 @@ impl HistoryEntry {
     }
 
     fn text_bytes(&self) -> usize {
-        self.raw_text.len() + self.final_text.len()
+        self.raw_text.len()
+            + self.final_text.len()
+            + self
+                .screen_context
+                .as_ref()
+                .map_or(0, context::Evidence::text_bytes)
     }
 
     fn matches(&self, needle: &str) -> bool {
@@ -164,6 +172,7 @@ pub struct HistoryDraft {
     pub total_ms: u64,
     /// The dictation's audio, while Labs › Keep recordings is on.
     pub recording: Option<Recording>,
+    pub screen_context: Option<context::Draft>,
 }
 
 #[derive(Serialize)]
@@ -210,6 +219,8 @@ pub struct HistoryStore {
     path: PathBuf,
     /// Labs › Keep recordings' audio, one file per entry.
     recordings: PathBuf,
+    screenshots: PathBuf,
+    screenshot_cap: u64,
     recording_cap: u64,
     entries: Vec<HistoryEntry>,
     next_id: u64,
@@ -234,6 +245,8 @@ impl HistoryStore {
     pub fn open(path: PathBuf, retention: HistoryRetention, now_ms: u64) -> Self {
         let mut store = Self {
             recordings: recordings::directory(&path),
+            screenshots: context::directory(&path),
+            screenshot_cap: context::MAX_TOTAL_SCREENSHOT_BYTES,
             recording_cap: recordings::MAX_RECORDING_BYTES,
             path,
             entries: Vec::new(),
@@ -318,6 +331,19 @@ impl HistoryStore {
                 0
             })
         });
+        let screen_context = draft.screen_context.map(|draft| {
+            let mut evidence = draft.evidence.bounded();
+            if let Some(jpeg) = draft.jpeg {
+                match context::write(&self.screenshots, id, &jpeg) {
+                    Ok(bytes) => evidence.screenshot_bytes = bytes,
+                    Err(error) => {
+                        evidence.screenshot_note =
+                            Some(format!("Screenshot could not be saved: {error}"))
+                    }
+                }
+            }
+            evidence
+        });
         self.entries.push(HistoryEntry {
             id,
             timestamp_ms: now_ms,
@@ -338,6 +364,7 @@ impl HistoryStore {
             inference_ms: draft.inference_ms,
             total_ms: draft.total_ms,
             recording_bytes,
+            screen_context,
         });
         self.prune(now_ms);
         self.persist()?;
@@ -370,6 +397,8 @@ impl HistoryStore {
         entry.raw_text = truncated(text, MAX_TEXT_BYTES);
         entry.final_text = entry.raw_text.clone();
         entry.processing = None;
+        // A manually replaced transcript no longer matches the old trace.
+        entry.screen_context = None;
         if let Err(error) = self.persist() {
             self.entries[index] = previous;
             return Err(error);
@@ -383,6 +412,15 @@ impl HistoryStore {
             .iter()
             .find(|entry| entry.id == id && entry.has_recording())
             .map(|_| recordings::path(&self.recordings, id))
+    }
+
+    pub fn screenshot_path(&self, id: u64) -> Option<PathBuf> {
+        self.entries
+            .iter()
+            .find(|entry| entry.id == id)
+            .and_then(|entry| entry.screen_context.as_ref())
+            .filter(|context| context.screenshot_bytes > 0)
+            .map(|_| context::path(&self.screenshots, id))
     }
 
     /// Delete every entry. A failed save keeps them, so the clear can be
@@ -514,6 +552,27 @@ impl HistoryStore {
             }
         }
         self.prune_pending |= changed;
+        let mut screenshots: u64 = self
+            .entries
+            .iter()
+            .filter_map(|e| e.screen_context.as_ref())
+            .map(|c| c.screenshot_bytes)
+            .sum();
+        for entry in &mut self.entries {
+            if screenshots <= self.screenshot_cap {
+                break;
+            }
+            if let Some(context) = &mut entry.screen_context
+                && context.screenshot_bytes > 0
+            {
+                screenshots -= context.screenshot_bytes;
+                context.screenshot_bytes = 0;
+                context.screenshot_note =
+                    Some("Screenshot removed by History's 128 MiB limit".into());
+                changed = true;
+            }
+        }
+        self.prune_pending |= changed;
         changed
     }
 
@@ -544,6 +603,15 @@ impl HistoryStore {
             entries
                 .iter()
                 .any(|entry| entry.id == id && entry.has_recording())
+        });
+        context::sweep(&self.screenshots, self.next_id, |id| {
+            entries.iter().any(|entry| {
+                entry.id == id
+                    && entry
+                        .screen_context
+                        .as_ref()
+                        .is_some_and(|c| c.screenshot_bytes > 0)
+            })
         });
         Ok(())
     }
@@ -618,6 +686,10 @@ impl History {
 
     pub fn replace_text(&self, id: u64, text: &str) -> io::Result<bool> {
         self.synced().replace_text(id, text)
+    }
+
+    pub fn screenshot_path(&self, id: u64) -> Option<PathBuf> {
+        self.synced().screenshot_path(id)
     }
 
     pub fn recording_path(&self, id: u64) -> Option<PathBuf> {
@@ -710,6 +782,7 @@ mod tests {
             inference_ms: 80,
             total_ms: 1_100,
             recording: None,
+            screen_context: None,
         }
     }
 
