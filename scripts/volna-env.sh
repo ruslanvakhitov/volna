@@ -1,7 +1,7 @@
 #!/bin/bash
 # Source from build/check scripts. No global Xcode selection or SDK edits.
 volna_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-volna_xcode_major=$(xcodebuild -version 2>/dev/null | sed -n '1s/Xcode \([0-9]*\).*/\1/p')
+volna_xcode_major=$(xcodebuild -version 2>/dev/null | sed -n '1s/Xcode \([0-9]*\).*/\1/p' || true)
 if [ "${volna_xcode_major:-0}" -lt 26 ]; then
   export DEVELOPER_DIR=/Library/Developer/CommandLineTools
   export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.1.sdk
