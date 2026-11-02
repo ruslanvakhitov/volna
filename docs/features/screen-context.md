@@ -26,7 +26,7 @@ dictionary; website-specific dictionaries are not implemented.
 Apple Vision’s accurate recognizer is used because its fast recognizer does not
 support Cyrillic on all macOS versions. It runs off the audio and UI threads, in
 parallel with recording. Only one OCR worker runs; at most two more requests wait.
-Capture/recognition has a 3 second bridge deadline. Processing waits at most 450 ms
+Capture/recognition has a 12 second bridge deadline, including ScreenCaptureKit cold startup. A real Telegram screen exceeded the old 3 second deadline even during a 9 second dictation; OCR on the saved image itself took about 0.7 seconds. Processing waits at most 450 ms
 for an outstanding OCR result, then falls back to saved terms. OCR can misread
 letters, especially Latin I/l; learned vocabulary is a hint, not a verified transcript.
 

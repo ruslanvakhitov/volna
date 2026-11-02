@@ -100,7 +100,9 @@ public func volnaScreenCapture(_ expectedPID: Int32) -> UnsafeMutablePointer<CCh
             box.set(result)
         } catch { box.set(OCRResult(error: "Could not read screen text; check Screen Recording permission")) }
     }
-    _ = done.wait(timeout: .now() + 3.0)
+    // ScreenCaptureKit cold startup is part of this budget too. Do not discard
+    // an OCR result at 3 s while the person is still dictating.
+    _ = done.wait(timeout: .now() + 12.0)
     return encode(box.get())
 }
 

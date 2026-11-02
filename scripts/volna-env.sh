@@ -16,7 +16,7 @@ if [ "${volna_xcode_major:-0}" -lt 26 ]; then
   export VOLNA_NO_FOUNDATION_MODELS=1
 fi
 export HEX_LOCAL_BUILD=1
-export HEX_VERSION=0.1.1
+export HEX_VERSION=0.1.2
 export CARGO_INCREMENTAL=0
 export CARGO_PROFILE_RELEASE_DEBUG=0
 export MACOSX_DEPLOYMENT_TARGET=15.0
