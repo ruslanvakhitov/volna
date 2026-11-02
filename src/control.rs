@@ -76,6 +76,14 @@ pub enum Pane {
 #[serde(tag = "command", rename_all = "kebab-case")]
 pub enum ControlCommand {
     Status,
+    #[cfg(target_os = "macos")]
+    ScreenContextProbe {
+        capture: bool,
+        learn: bool,
+        transcript: String,
+    },
+    #[cfg(target_os = "macos")]
+    ScreenContextStatus,
     Quit {
         #[serde(default)]
         force: bool,
@@ -396,6 +404,8 @@ impl ControlCommand {
     /// How long a transport waits for the app's answer to this command.
     pub fn deadline(&self) -> Duration {
         match self {
+            #[cfg(target_os = "macos")]
+            Self::ScreenContextProbe { .. } => Duration::from_secs(25),
             Self::Dictation { print: true, .. } => PRINT_WAIT + Duration::from_secs(5),
             _ => CONTROL_DEADLINE,
         }

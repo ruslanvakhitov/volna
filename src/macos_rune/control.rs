@@ -59,6 +59,17 @@ impl Pump {
     ) -> Option<ControlReply> {
         let runtime = self.runtime.clone();
         match command {
+            ControlCommand::ScreenContextStatus => Some(crate::screen_context::probe_status()),
+            ControlCommand::ScreenContextProbe {
+                capture,
+                learn,
+                transcript,
+            } => {
+                background(reply, move || {
+                    crate::screen_context::run_probe(capture, learn, transcript)
+                });
+                None
+            }
             ControlCommand::Status => {
                 let meeting = meeting_report(&self.meeting_state);
                 let window = self.window.clone();

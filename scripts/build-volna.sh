@@ -14,7 +14,7 @@ python3 - "$bundle/Contents/Info.plist" <<'PY'
 import sys, plistlib
 p=sys.argv[1]
 with open(p,'rb') as f: d=plistlib.load(f)
-d.update(CFBundleName='Volna',CFBundleDisplayName='Volna',CFBundleIdentifier='com.ruslan.volna',CFBundleExecutable='volna',CFBundleShortVersionString='0.1.2',CFBundleVersion='102')
+d.update(CFBundleName='Volna',CFBundleDisplayName='Volna',CFBundleIdentifier='com.ruslan.volna',CFBundleExecutable='volna',CFBundleShortVersionString='0.1.3',CFBundleVersion='103')
 d.pop('CFBundleIconName',None)
 d['CFBundleURLTypes']=[{'CFBundleURLName':'com.ruslan.volna','CFBundleURLSchemes':['volna']}]
 d['NSScreenCaptureUsageDescription']='Volna reads screen text locally only for contextual dictation. Screenshots and extracted text stay locally with retained dictation History.'

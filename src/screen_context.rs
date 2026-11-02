@@ -5,6 +5,14 @@
 mod engine;
 mod evidence;
 mod phonetic;
+#[cfg(target_os = "macos")]
+mod probe;
+#[cfg(target_os = "macos")]
+pub(crate) use probe::execute as run_probe;
+#[cfg(target_os = "macos")]
+pub(crate) use probe::status as probe_status;
+#[cfg(target_os = "macos")]
+mod reader;
 mod store;
 #[cfg(test)]
 mod tests;
@@ -86,6 +94,7 @@ struct SessionInner {
     application: String,
     pid: i32,
     capture: bool,
+    learn: bool,
     started: AtomicBool,
     state: Mutex<Option<ScreenText>>,
     ready: Condvar,
@@ -127,6 +136,10 @@ fn foreground() -> Option<(String, String, i32)> {
 /// context-monitor updates or queued dictations.
 pub fn begin(context: &ContextSnapshot, capture: bool) -> ContextSnapshot {
     CONTEXTUAL.store(capture && settings().enabled, Ordering::Relaxed);
+    begin_with_learning(context, capture, true)
+}
+
+fn begin_with_learning(context: &ContextSnapshot, capture: bool, learn: bool) -> ContextSnapshot {
     let mut context = context.clone();
     context.screen = None;
     if !settings().enabled {
@@ -155,6 +168,7 @@ pub fn begin(context: &ContextSnapshot, capture: bool) -> ContextSnapshot {
         application,
         pid,
         capture,
+        learn,
         started: AtomicBool::new(false),
         state: Mutex::new(None),
         ready: Condvar::new(),
@@ -182,7 +196,11 @@ impl Session {
                             success = result.error.is_none(),
                             "Volna screen context captured"
                         );
-                        if result.error.is_none() && settings().enabled && settings().learn {
+                        if result.error.is_none()
+                            && session.0.learn
+                            && settings().enabled
+                            && settings().learn
+                        {
                             if let Err(error) = store::learn(
                                 &session.0.scope,
                                 &session.0.application,
@@ -354,6 +372,7 @@ unsafe extern "C" {
     fn volna_screen_free(string: *mut std::ffi::c_char);
     fn volna_screen_permission(request: bool) -> bool;
     fn volna_ocr_file(path: *const std::ffi::c_char) -> *mut std::ffi::c_char;
+    fn volna_ocr_bytes(bytes: *const u8, count: usize) -> *mut std::ffi::c_char;
 }
 
 pub fn permission(request: bool) -> bool {
@@ -393,7 +412,18 @@ fn capture_screen(pid: i32) -> ScreenText {
     #[cfg(target_os = "macos")]
     // SAFETY: called on the bounded OCR worker; no pointers cross the call.
     unsafe {
-        read_native(volna_screen_capture(pid))
+        let mut screen = read_native(volna_screen_capture(pid));
+        if screen.error.is_none() {
+            match reader::recognize(&screen) {
+                Ok(ocr) => {
+                    screen.text = ocr.text;
+                    screen.elapsed_ms = ocr.elapsed_ms;
+                    screen.error = ocr.error;
+                }
+                Err(error) => screen.error = Some(error),
+            }
+        }
+        screen
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -414,6 +444,17 @@ pub enum Command {
     Dictionaries,
     /// Test OCR against a supplied image; does not capture the screen or learn.
     Ocr { image: std::path::PathBuf },
+    /// Test the running app's real capture/correction path. No history is saved.
+    Probe {
+        /// Test saved app vocabulary without taking a screenshot (like Option).
+        #[arg(long)]
+        dictionary: bool,
+        /// Permit this explicit probe to learn terms, like Right Command.
+        #[arg(long)]
+        learn: bool,
+        #[arg(long, default_value = "")]
+        transcript: String,
+    },
     /// Test local correction on supplied text, without learning or capturing.
     Rewrite {
         transcript: String,
@@ -428,12 +469,29 @@ pub enum Command {
 #[cfg(target_os = "macos")]
 pub fn run(command: &Command) -> color_eyre::Result<()> {
     match command {
-        Command::Status => println!(
-            "{}",
-            serde_json::json!({"screen_permission":permission(false), "settings":settings(), "engine":engine_status(), "dictionaries":dictionaries()})
-        ),
+        Command::Status => probe::run_status_cli()?,
         Command::Dictionaries => println!("{}", serde_json::to_string_pretty(&dictionaries())?),
+        Command::Probe {
+            dictionary,
+            learn,
+            transcript,
+        } => probe::run_cli(!dictionary, *learn, transcript)?,
         Command::Ocr { image } => {
+            if image == std::path::Path::new("-") {
+                use std::io::Read;
+                let mut bytes = Vec::new();
+                std::io::stdin()
+                    .take(6 * 1024 * 1024 + 1)
+                    .read_to_end(&mut bytes)?;
+                color_eyre::eyre::ensure!(
+                    bytes.len() <= 6 * 1024 * 1024,
+                    "OCR input exceeds 6 MiB"
+                );
+                // SAFETY: bytes stay alive through the synchronous bridge call.
+                let result = unsafe { read_native(volna_ocr_bytes(bytes.as_ptr(), bytes.len())) };
+                println!("{}", serde_json::to_string(&result)?);
+                return Ok(());
+            }
             let path = std::ffi::CString::new(image.to_string_lossy().as_bytes())?;
             // SAFETY: path remains alive; the bridge owns the returned string.
             let result = unsafe { read_native(volna_ocr_file(path.as_ptr())) };

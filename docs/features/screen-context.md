@@ -26,7 +26,14 @@ dictionary; website-specific dictionaries are not implemented.
 Apple Vision’s accurate recognizer is used because its fast recognizer does not
 support Cyrillic on all macOS versions. It runs off the audio and UI threads, in
 parallel with recording. Only one OCR worker runs; at most two more requests wait.
-Capture/recognition has a 12 second bridge deadline, including ScreenCaptureKit cold startup. A real Telegram screen exceeded the old 3 second deadline even during a 9 second dictation; OCR on the saved image itself took about 0.7 seconds. Processing waits at most 450 ms
+Capture has a 12 second bridge deadline, including ScreenCaptureKit cold startup.
+Vision runs in a short-lived child process on a JPEG sent through anonymous
+pipes, with a separate 5 second deadline. No temporary screenshot file is
+created. The child uses the same decoder/recognizer as `context ocr -`.
+Live in-process Vision failed during real Telegram dictation at both 3 and
+12 second deadlines, while OCR on the saved JPEG took about 0.7 seconds.
+The isolated reader avoids running that synchronous ML call on the GUI capture
+Task executor. The earlier deadline-only change was not sufficient. Processing waits at most 450 ms
 for an outstanding OCR result, then falls back to saved terms. OCR can misread
 letters, especially Latin I/l; learned vocabulary is a hint, not a verified transcript.
 
@@ -76,3 +83,11 @@ Verification:
   input, target-app paste, or a new app’s macOS permission grants.
 - Full native acceptance needs Volna’s three permissions and a physical
   Right Command dictation followed by Option in the same target app.
+
+Diagnostics (macOS): `context status` queries the running app, so its permission
+result cannot be confused with the invoking terminal’s grant. `context probe`
+uses the real foreground-app session, capture worker and local corrector without
+audio, paste or History writes. It does not learn unless `--learn` is supplied;
+`--dictionary` tests the Option path, and `--transcript TEXT` tests correction.
+Run it with the intended app in front. Both commands use the authenticated
+owner-only local API.

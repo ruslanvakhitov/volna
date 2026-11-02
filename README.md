@@ -48,6 +48,9 @@ vocabulary and the upstream speech-model picker remain available.
 # Read status or inspect learned terms; these do not take a screenshot.
 dist/Volna.app/Contents/MacOS/volna context status
 dist/Volna.app/Contents/MacOS/volna context dictionaries
+# Test the running app without audio, paste or retained History.
+# Keep the target app in front; learning requires --learn.
+dist/Volna.app/Contents/MacOS/volna context probe --transcript "открой кодекс"
 # Test OCR on your own image without learning.
 dist/Volna.app/Contents/MacOS/volna context ocr sample.png
 # Test local correction on supplied text, without learning.

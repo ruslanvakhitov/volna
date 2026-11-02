@@ -59,6 +59,7 @@ public func volnaScreenCapture(_ expectedPID: Int32) -> UnsafeMutablePointer<CCh
     Task.detached(priority: .userInitiated) {
         defer { done.signal() }
         do {
+            box.set(OCRResult(error: "Screen enumeration timed out"))
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             guard NSWorkspace.shared.frontmostApplication?.processIdentifier == expectedPID else {
                 box.set(OCRResult(error: "App changed before the screenshot; using its saved dictionary")); return
@@ -81,6 +82,7 @@ public func volnaScreenCapture(_ expectedPID: Int32) -> UnsafeMutablePointer<CCh
             config.width = Int(display.frame.width * scale)
             config.height = Int(display.frame.height * scale)
             config.showsCursor = false
+            box.set(OCRResult(error: "Screen capture timed out"))
             let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
             // Keep a local JPEG preview of the image OCR saw for this dictation.
             let data = NSMutableData()
@@ -91,19 +93,27 @@ public func volnaScreenCapture(_ expectedPID: Int32) -> UnsafeMutablePointer<CCh
                     jpeg = (data as Data).base64EncodedString()
                 }
             }
-            var result: OCRResult
-            box.set(OCRResult(error: "Screen captured, but OCR did not finish before its deadline", screenshot_jpeg: jpeg))
-            do { result = try recognize(image) }
-            catch { result = OCRResult(error: "Vision could not recognize screen text") }
-            result.screenshot_jpeg = jpeg
-            if jpeg == nil { result.screenshot_note = "Screenshot preview could not be encoded or exceeded 6 MiB" }
+            // Vision runs in a short-lived OCR process on a decoded CPU image.
+            // Do not run its synchronous ML request on the capture Task executor.
+            var result = OCRResult(screenshot_jpeg: jpeg)
+            if jpeg == nil { result.error = "Screenshot could not be encoded or exceeded 6 MiB" }
             box.set(result)
         } catch { box.set(OCRResult(error: "Could not read screen text; check Screen Recording permission")) }
     }
-    // ScreenCaptureKit cold startup is part of this budget too. Do not discard
-    // an OCR result at 3 s while the person is still dictating.
+    // ScreenCaptureKit cold startup is part of this capture-only budget.
     _ = done.wait(timeout: .now() + 12.0)
     return encode(box.get())
+}
+
+@_cdecl("volna_ocr_bytes")
+public func volnaOCRBytes(_ bytes: UnsafePointer<UInt8>, _ count: Int) -> UnsafeMutablePointer<CChar>? {
+    let data = Data(bytes: bytes, count: count)
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+          let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+        return encode(OCRResult(error: "Could not decode screen image"))
+    }
+    do { return encode(try recognize(image)) }
+    catch { return encode(OCRResult(error: "Vision could not recognize screen text")) }
 }
 
 @_cdecl("volna_ocr_file")
