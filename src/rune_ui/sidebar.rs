@@ -57,7 +57,7 @@ pub(super) enum Pane {
     /// Dictation, output, and application basics.
     #[default]
     General,
-    /// What Hex does to every dictation and in some apps, read-only: the
+    /// What Volna does to every dictation and in some apps, read-only: the
     /// person's agent edits it.
     Output,
     /// The old per-app editor, kept for its scenes until it is removed.
@@ -65,12 +65,12 @@ pub(super) enum Pane {
     /// Recorded calls and their settings, or the opt-in (macOS beta).
     Meetings,
     History,
-    /// Annotate (Scrawl's captures inside Hex): the switch, shortcuts,
+    /// Annotate (Scrawl's captures inside Volna): the switch, shortcuts,
     /// permission, transcriber, folder, retention, and Scrawl's own app.
     /// Dev builds, macOS and Linux only.
     #[cfg(hex_capture)]
     Annotate,
-    /// The Hex Microphone's driver, tuning, and try-it demo (macOS, while
+    /// The Volna Microphone's driver, tuning, and try-it demo (macOS, while
     /// its Labs toggle is on).
     VoiceFilter,
     /// The dictation indicator's tuning scene (Playground only).
@@ -198,6 +198,29 @@ pub(super) fn sidebar(ui: &Ui, p: Paint) -> El {
         .pb(12.0)
         .pl(10.0)
         .pr(6.0)
+        .child(
+            row()
+                .key("volna-brand")
+                .gap(10.0)
+                .center_y()
+                .px(10.0)
+                .py(18.0)
+                .child(icon(&super::icons::VOLNA, 27.0).color(p.accent()))
+                .child(
+                    col()
+                        .gap(3.0)
+                        .child(
+                            text("Volna")
+                                .font(rune::TextStyle::new(23.0, 650.0))
+                                .color(p.text()),
+                        )
+                        .child(
+                            text(tr("Voice, in context"))
+                                .font(p.k.ty.small)
+                                .color(p.muted()),
+                        ),
+                ),
+        )
         .child(nav)
         .child(el().key("spacer").grow(1.0))
         .children(sidebar_update::control(ui, p))
@@ -441,14 +464,14 @@ fn nav_item(p: Paint, pane: Pane, on: bool) -> El {
     lists::source_item(item, on)
 }
 
-/// Linux has no tray: the window's way to stop Hex. Closing the window
-/// keeps Hex dictating.
+/// Linux has no tray: the window's way to stop Volna. Closing the window
+/// keeps Volna dictating.
 fn quit_item(p: Paint) -> El {
     let c = &p.k.c;
     row()
         .key("quit")
         .role("button")
-        .label(tr("Quit Hex"))
+        .label(tr("Quit Volna"))
         .h(NAV_ROW_HEIGHT)
         .px(6.0)
         .mt(NAV_ROW_GAP)
@@ -460,7 +483,7 @@ fn quit_item(p: Paint) -> El {
         .focusable(true)
         .focus_ring(2.0, -2.0, c.border_focus)
         .child(
-            text(tr("Quit Hex"))
+            text(tr("Quit Volna"))
                 .key("label")
                 .font(p.k.ty.ui)
                 .color(c.text_muted)

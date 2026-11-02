@@ -9,22 +9,22 @@ use tracing_subscriber::fmt::writer::MakeWriterExt;
 /// Whether this is a local build (`HEX_LOCAL_BUILD=1`): made from a checkout
 /// for its owner's own machine, so it never checks for or offers updates.
 pub fn is_local_build() -> bool {
-    option_env!("HEX_LOCAL_BUILD") == Some("1")
+    true // Independent Volna builds never install upstream Hex updates.
 }
 
-/// Whether this is a macOS `Hex Test.app` build (`HEX_TEST_BUILD=1`), which
-/// keeps its data, settings, and user config apart from the installed Hex.
+/// Whether this is a macOS `Volna Test.app` build (`HEX_TEST_BUILD=1`), which
+/// keeps its data, settings, and user config apart from the installed Volna.
 pub fn is_macos_test_build() -> bool {
     cfg!(target_os = "macos") && option_env!("HEX_TEST_BUILD") == Some("1")
 }
 
-/// The name menus show, so a test build running beside Hex reads as itself.
+/// The name menus show, so a test build running beside Volna reads as itself.
 #[cfg(target_os = "macos")]
 pub fn app_name() -> &'static str {
     if is_macos_test_build() {
-        "Hex Test"
+        "Volna Test"
     } else {
-        "Hex"
+        "Volna"
     }
 }
 
@@ -35,9 +35,9 @@ pub fn support_dir() -> Result<PathBuf> {
     let data =
         dirs::data_dir().ok_or_else(|| eyre!("application data directory is unavailable"))?;
     let folder = if is_macos_test_build() {
-        "hex-test"
+        "volna-test"
     } else {
-        "hex"
+        "volna"
     };
     Ok(data.join(folder))
 }
@@ -104,7 +104,7 @@ pub fn personal_commands_workspace() -> Result<PathBuf> {
     user_config_dir()
 }
 
-/// The per-user config folder holding `hex.config.ts` on every OS: `~/.config/hex`, or `~/.config/hex-test` for `Hex Test.app`.
+/// The per-user config folder holding `hex.config.ts` on every OS: `~/.config/hex`, or `~/.config/hex-test` for `Volna Test.app`.
 fn user_config_dir() -> Result<PathBuf> {
     let home = dirs::home_dir().ok_or_else(|| eyre!("home directory is unavailable"))?;
     Ok(user_config_dir_in(&home, is_macos_test_build()))
@@ -112,7 +112,7 @@ fn user_config_dir() -> Result<PathBuf> {
 
 fn user_config_dir_in(home: &std::path::Path, test_build: bool) -> PathBuf {
     home.join(".config")
-        .join(if test_build { "hex-test" } else { "hex" })
+        .join(if test_build { "volna-test" } else { "volna" })
 }
 
 #[cfg(test)]
@@ -124,11 +124,11 @@ mod tests {
         let home = std::path::Path::new("/Users/kit");
         assert_eq!(
             user_config_dir_in(home, false),
-            home.join(".config").join("hex")
+            home.join(".config").join("volna")
         );
         assert_eq!(
             user_config_dir_in(home, true),
-            home.join(".config").join("hex-test")
+            home.join(".config").join("volna-test")
         );
     }
 }

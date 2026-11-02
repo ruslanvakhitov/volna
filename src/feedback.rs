@@ -23,7 +23,7 @@ pub enum KeySoundStyle {
     Felt,
     /// Rounded 22 ms low-pitch warm droplet.
     Soft,
-    /// Silent typing (only Hex's dictation tones play).
+    /// Silent typing (only Volna's dictation tones play).
     Silent,
 }
 
@@ -390,9 +390,8 @@ pub fn play(tone: Tone) {
 pub enum SoundSet {
     /// One kalimba-like voice playing one motif across a dictation.
     Signature = 0,
-    /// The sounds Hex played before the signature set. It has no done tone,
+    /// The sounds Volna played before the signature set. It has no done tone,
     /// and errors play macOS Basso as they did.
-    #[default]
     Classic = 1,
     Click = 2,
     Soft = 3,
@@ -400,11 +399,13 @@ pub enum SoundSet {
     Analog = 5,
     /// The team vote's winner (2026-10): one mechanical key's thock.
     Thock = 6,
+    #[default]
+    Volna = 7,
 }
 
 impl SoundSet {
     /// In the order Settings lists them.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Signature,
         Self::Classic,
         Self::Click,
@@ -412,12 +413,14 @@ impl SoundSet {
         Self::Wood,
         Self::Analog,
         Self::Thock,
+        Self::Volna,
     ];
 
     /// The English name Settings shows, translated where it is shown.
     pub fn name(self) -> &'static str {
         match self {
-            Self::Signature => "Hex signature",
+            Self::Volna => "Volna water",
+            Self::Signature => "Original kalimba",
             Self::Classic => "Classic",
             Self::Click => "Click",
             Self::Soft => "Soft tone",
@@ -430,8 +433,9 @@ impl SoundSet {
     /// What the set sounds like, in a few words, as the sound picker lists it.
     pub fn character(self) -> &'static str {
         match self {
+            Self::Volna => "A soft glass ripple, rising then settling",
             Self::Signature => "A kalimba motif that rises and comes home",
-            Self::Classic => "The tones Hex first shipped with",
+            Self::Classic => "The tones Volna first shipped with",
             Self::Click => "Mechanical key clicks",
             Self::Soft => "Warm, rounded blips",
             Self::Wood => "Soft marimba and hollow wood blocks",
@@ -521,7 +525,7 @@ impl Audition {
     }
 }
 
-static SOUND_SET: AtomicU8 = AtomicU8::new(SoundSet::Classic as u8);
+static SOUND_SET: AtomicU8 = AtomicU8::new(SoundSet::Volna as u8);
 
 pub fn set_sound_set(set: SoundSet) {
     SOUND_SET.store(set as u8, Ordering::Relaxed);
@@ -614,7 +618,7 @@ macro_rules! synthesized_set {
 }
 
 /// In [`SoundSet::ALL`]'s order.
-const BUNDLED_SETS: [BundledSet; 7] = [
+const BUNDLED_SETS: [BundledSet; 8] = [
     synthesized_set!("signature"),
     BundledSet {
         start: bundled_sound!("classic", "start"),
@@ -642,6 +646,7 @@ const BUNDLED_SETS: [BundledSet; 7] = [
         error: Some(bundled_sound!("thock", "error")),
         success: Some(bundled_sound!("thock", "success")),
     },
+    synthesized_set!("volna"),
 ];
 
 /// One set, decoded.
@@ -1170,7 +1175,7 @@ pub(crate) fn mix_offline_wav(
     Ok(())
 }
 
-/// Decodes one of Hex's bundled 16-bit PCM sounds.
+/// Decodes one of Volna's bundled 16-bit PCM sounds.
 fn decode_wav(bytes: &'static [u8]) -> Result<SamplesBuffer> {
     let reader =
         hound::WavReader::new(Cursor::new(bytes)).wrap_err("could not decode feedback audio")?;
@@ -1376,7 +1381,8 @@ mod tests {
             let json = serde_json::to_string(&set).unwrap();
             assert_eq!(serde_json::from_str::<SoundSet>(&json).unwrap(), set);
         }
-        assert_eq!(SoundSet::decode(u8::MAX), SoundSet::Classic);
+        assert_eq!(SoundSet::decode(u8::MAX), SoundSet::Volna);
+        assert_eq!(SoundSet::default(), SoundSet::Volna);
         assert_eq!(
             serde_json::to_string(&SoundSet::Analog).unwrap(),
             "\"analog\""

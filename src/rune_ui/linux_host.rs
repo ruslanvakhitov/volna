@@ -1,7 +1,7 @@
 //! The Linux window's host: the dictation host in this process
 //! (`linux_app::HostHandle`), which owns the listener, shortcuts, models,
 //! History, and updates. A headless render without one reads the running
-//! Hex's `hex status` instead.
+//! Volna's `hex status` instead.
 
 use std::sync::Arc;
 
@@ -21,11 +21,11 @@ pub(super) const HOST_SAVES_SHORTCUTS: bool = true;
 pub(super) const RECORDS_KEY_EVENTS: bool = true;
 /// X11 and portal shortcuts paste with Ctrl+V; terminals want Ctrl+Shift+V.
 pub(super) const TERMINAL_PASTE: bool = true;
-/// Linux has no tray, so the window offers Quit Hex.
+/// Linux has no tray, so the window offers Quit Volna.
 pub(super) const QUIT_IN_WINDOW: bool = true;
 
 /// Closes an open window and gives the event loop a moment to tear its
-/// surface down before Hex quits. Quitting with the window still open
+/// surface down before Volna quits. Quitting with the window still open
 /// destroyed it during the loop's exit, which crashed NVIDIA's driver on
 /// Wayland (#821); closing it first, as the window's own close does, exits
 /// cleanly. Bounded, so a loop that never answers still quits.

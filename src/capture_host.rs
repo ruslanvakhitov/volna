@@ -1,5 +1,5 @@
 //! The `capture` experiment (macOS, Linux, and Windows): Scrawl's capture
-//! engine, the `scrawl-capture` crate, hosted inside Hex. Step 3 of
+//! engine, the `scrawl-capture` crate, hosted inside Volna. Step 3 of
 //! `docs/plans/capture-in-hex.md`. Everything here is shared; what differs
 //! by OS is the engine's own platform adapter (ScreenCaptureKit; the portal,
 //! PipeWire and VA-API; or Windows.Graphics.Capture), where the audio
@@ -7,7 +7,7 @@
 //! listeners' [`ListenerTimeline`]), "While dictating" ([`Environment`]),
 //! the transcriber, and the clipboard.
 //!
-//! The engine records the screen and writes the bundle; Hex owns the
+//! The engine records the screen and writes the bundle; Volna owns the
 //! microphone and the model. A capture copies audio from the dictation
 //! timeline through a bounded sink (no second stream) and hands it to
 //! `SealedCapture::finish` ([`AudioIn::External`]), and its words come from
@@ -24,7 +24,7 @@
 //!
 //! While a capture records it holds a recording-environment session with
 //! "While dictating" (`recording_audio_behavior`, read at each start),
-//! released when it stops, is cancelled, or Hex quits; dictation's own
+//! released when it stops, is cancelled, or Volna quits; dictation's own
 //! session composes with it.
 //!
 //! Views never reach into the host: every change to a capture (started,
@@ -161,7 +161,7 @@ const SCREEN_CHECK: Duration = Duration::from_millis(100);
 const START_RETRY: Duration = Duration::from_secs(60);
 
 // ---------------------------------------------------------------------------
-// The engine, as Hex runs it.
+// The engine, as Volna runs it.
 
 /// What [`CaptureHost`] needs from an engine: Scrawl's in the app, and in
 /// tests one that records no screen.
@@ -231,7 +231,7 @@ pub enum CaptureTarget {
     /// centre.
     Area { rect: [f64; 4] },
     /// The first cabled iPhone ([`CaptureSnapshot::phone`]), mirrored in a
-    /// window while it records. The narration is Hex's microphone timeline,
+    /// window while it records. The narration is Volna's microphone timeline,
     /// as for the screen; the mirror opens no microphone.
     Phone,
 }
@@ -287,7 +287,7 @@ pub enum CaptureCommand {
     /// Pastes the newest written capture into the app in front, as
     /// Scrawl's Paste chip does: its contact sheet, then its summary.
     Paste,
-    /// Opens the newest written capture's contact sheet: Hex has no review
+    /// Opens the newest written capture's contact sheet: Volna has no review
     /// window, and opening the bundle could launch Scrawl.app, which takes
     /// captures over.
     Inspect,
@@ -386,7 +386,7 @@ impl Sealed for scrawl_capture::capture::SealedCapture {
 }
 
 /// Scrawl's engine with nothing machine-wide: no ingest server (port
-/// 47777), delivery retries, or global shortcuts. Hex never calls
+/// 47777), delivery retries, or global shortcuts. Volna never calls
 /// `install_shared_resources`.
 fn scrawl_engine(
     events: SyncSender<Event>,
@@ -398,7 +398,7 @@ fn scrawl_engine(
 }
 
 /// What the capture asks for: `target`, on the clock the dictation timeline
-/// shares, with Hex's audio and Hex's folder.
+/// shares, with Volna's audio and Volna's folder.
 fn start_request(t0: CaptureInstant, bundle: PathBuf, target: Target) -> Start {
     Start {
         t0_boot_ns: t0.as_nanos(),
@@ -442,7 +442,7 @@ impl Host for HexHost {
     }
 }
 
-/// What a capture leaves out of its recording (every window Hex named) and
+/// What a capture leaves out of its recording (every window Volna named) and
 /// looks through for clicks: the ink overlay, and the capsule's panel, which
 /// lets clicks through everywhere but its pill. Clicks on the pill never
 /// reach the engine ([`CapsulePill`]).
@@ -458,16 +458,16 @@ fn own_windows_of(own: &[Option<u32>; 3]) -> OwnWindows {
 }
 
 /// `capture.show_overlays_in_recordings`: while set, a capture records every
-/// window of Hex's, its overlays included. A recording capture follows a
+/// window of Volna's, its overlays included. A recording capture follows a
 /// change at once.
 static OWN_WINDOWS_RECORDED: LazyLock<Arc<AtomicBool>> = LazyLock::new(Arc::default);
 
-/// Lets captures record Hex's own windows, or leaves them out again.
+/// Lets captures record Volna's own windows, or leaves them out again.
 pub fn record_own_windows(recorded: bool) {
     OWN_WINDOWS_RECORDED.store(recorded, Ordering::Release);
 }
 
-/// Whether screen recordings may show Hex's overlays, as last saved.
+/// Whether screen recordings may show Volna's overlays, as last saved.
 pub fn own_windows_recorded() -> bool {
     OWN_WINDOWS_RECORDED.load(Ordering::Acquire)
 }
@@ -555,17 +555,17 @@ fn on_pill(origin: [f64; 2], pill: [f32; 4], x: f64, y: f64) -> bool {
     x >= left && x <= left + pw && y >= top && y <= top + ph
 }
 
-/// Hex's windows a capture leaves out of its recording, one per role. A
+/// Volna's windows a capture leaves out of its recording, one per role. A
 /// capture reads them when it starts.
 static OWN_WINDOWS: Mutex<[Option<u32>; 3]> = Mutex::new([None, None, None]);
 
-/// Which of Hex's windows a capture leaves out.
+/// Which of Volna's windows a capture leaves out.
 #[derive(Clone, Copy, Debug)]
 pub enum OwnWindow {
     /// A panel far larger than the pill: click-through but for the pill
     /// ([`set_capsule_pill`]).
     Capsule,
-    /// Click-through, so a click on it never counts as a click on Hex.
+    /// Click-through, so a click on it never counts as a click on Volna.
     Ink,
     /// The on-screen picker, hidden before the capture it starts records.
     Picker,
@@ -579,8 +579,8 @@ pub fn exclude_window(role: OwnWindow, window: u32) {
         .unwrap_or_else(|error| error.into_inner())[role as usize] = Some(window);
 }
 
-/// The engine's settings, from Hex rather than `~/.config/scrawl`. The
-/// captures folder, retention, and transcriber are Hex's `capture.*`
+/// The engine's settings, from Volna rather than `~/.config/scrawl`. The
+/// captures folder, retention, and transcriber are Volna's `capture.*`
 /// settings, applied by [`CaptureHost`]; the rest are Scrawl's defaults,
 /// chosen here: auto-crop on (it applies to display captures), and the
 /// `agentContext` summary format off.
@@ -626,7 +626,7 @@ fn shared_engine(
     if let Some(engine) = &*engine {
         return Ok(engine.clone());
     }
-    // The portal remembers the screen Hex was given; the token is Hex's.
+    // The portal remembers the screen Volna was given; the token is Volna's.
     #[cfg(target_os = "linux")]
     if let Ok(support) = crate::app_paths::support_dir() {
         scrawl_capture::linux::set_token_path(support.join("screencast-token"));
@@ -657,7 +657,7 @@ impl Transcriber for ChosenTranscriber {
             crate::app_settings::CaptureTranscriber::Apple => {
                 AppleTranscriber::default().transcribe(audio)
             }
-            // Apple's SpeechAnalyzer is macOS's; elsewhere it is Hex's model.
+            // Apple's SpeechAnalyzer is macOS's; elsewhere it is Volna's model.
             #[cfg(not(target_os = "macos"))]
             crate::app_settings::CaptureTranscriber::Apple => HexTranscriber {
                 engine: DICTATION_ENGINE
@@ -1008,7 +1008,7 @@ struct FinishJob {
 // ---------------------------------------------------------------------------
 // What views see: one snapshot of every capture, published on each change.
 
-/// Every capture Hex knows about, as one value. A view (the capture
+/// Every capture Volna knows about, as one value. A view (the capture
 /// capsule, the menu bar, `hex capture`) reads it whole instead of reaching
 /// into the host, and [`watch`] says when it changed.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -1056,7 +1056,7 @@ pub struct SettledCapture {
     pub words: Option<usize>,
     pub gaps: Option<usize>,
     pub missing_transcript: Option<String>,
-    /// Why a capture failed, when Hex knows.
+    /// Why a capture failed, when Volna knows.
     pub error: Option<String>,
     /// Where a written capture goes, while captures are sent to OpenCode
     /// (`capture.routing`'s `autoSend`).
@@ -1706,7 +1706,7 @@ impl CaptureHost {
         result.unwrap_or_else(|error| ControlReply::error("failed", format!("{error:#}")))
     }
 
-    /// Cancels a recording capture, as when Hex quits, and waits a bounded
+    /// Cancels a recording capture, as when Volna quits, and waits a bounded
     /// time for its cleanup and for captures still writing. Quitting stops
     /// their transcription, so they keep their audio without words.
     pub fn shutdown(&mut self, audio: &impl AudioTimeline) {
@@ -1834,7 +1834,7 @@ impl CaptureHost {
     /// Why no capture can start now, besides one already recording.
     fn refuse_start(&self) -> Option<ControlReply> {
         if self.finisher.is_none() {
-            return Some(ControlReply::error("busy", "Hex is stopping"));
+            return Some(ControlReply::error("busy", "Volna is stopping"));
         }
         // Every unfinished capture but the recording one is stopped and
         // writing or about to be.
@@ -1871,11 +1871,11 @@ impl CaptureHost {
             permissions::report(need);
             return Ok(ControlReply::error(
                 "permission",
-                format!("{} is off for Hex", need.name()),
+                format!("{} is off for Volna", need.name()),
             ));
         }
         let Some((jobs, _)) = &self.finisher else {
-            return Ok(ControlReply::error("busy", "Hex is stopping"));
+            return Ok(ControlReply::error("busy", "Volna is stopping"));
         };
         self.ended.retain(|collector| !collector.is_finished());
         let captures_dir = self
@@ -2036,7 +2036,7 @@ impl CaptureHost {
 }
 
 /// While captures are on, notes every couple of seconds whether Scrawl's own
-/// app runs: it then owns the capture shortcut, and Hex doesn't match it.
+/// app runs: it then owns the capture shortcut, and Volna doesn't match it.
 fn watch_scrawl() {
     const EVERY: Duration = Duration::from_secs(2);
     static LAST: Mutex<Option<Instant>> = Mutex::new(None);
@@ -2069,7 +2069,7 @@ pub fn scrawl_running() -> bool {
     false
 }
 
-/// Asks Scrawl's own app to quit, as "Use Hex for annotations" does.
+/// Asks Scrawl's own app to quit, as "Use Volna for annotations" does.
 #[cfg(target_os = "macos")]
 pub fn quit_scrawl() {
     use objc2_app_kit::NSRunningApplication;
@@ -2086,7 +2086,7 @@ pub fn quit_scrawl() {
 }
 
 // ---------------------------------------------------------------------------
-// Input from Hex's event tap.
+// Input from Volna's event tap.
 
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 /// What the session tap reports while a capture records.
@@ -2155,7 +2155,7 @@ pub fn report_input(at: CaptureInstant, input: Tapped) {
 // key comes up. The capsule's pen turns drawing on until it's clicked
 // again, the key is tapped or held and let go, or Escape. Shift still
 // draws on the Mac. While drawing, the ink overlay takes the pointer, so
-// clicks never reach the app; on Linux, where Wayland tells Hex nothing of
+// clicks never reach the app; on Linux, where Wayland tells Volna nothing of
 // the pointer elsewhere, its moves are the strokes (`draw`).
 
 /// A press shorter than this is a tap; held longer while recording, it
@@ -2534,7 +2534,7 @@ impl LiveInput {
     /// The `capture-input` thread: the engine's pure input rules turn each
     /// tap event into the event Scrawl's own taps would have sent, on the
     /// capture's clock; the engine then applies its ink and own-window
-    /// rules (Hex's windows are this process's).
+    /// rules (Volna's windows are this process's).
     fn forward(&self, received: Receiver<(CaptureInstant, Tapped)>) {
         let mut pill = CapsulePill::default();
         for (at, tapped) in received {
@@ -2555,14 +2555,14 @@ impl LiveInput {
                     ),
                     modifiers: modifiers(flags),
                 },
-                // Wayland reports no keys to Hex outside its own windows.
+                // Wayland reports no keys to Volna outside its own windows.
                 #[cfg(not(target_os = "macos"))]
                 Tapped::Key { .. } => continue,
             };
             let Some(event) = target.rules.translate(t_ms, input).map(as_pen) else {
                 continue;
             };
-            // A press or scroll on the capsule's pill is Hex's; anywhere
+            // A press or scroll on the capsule's pill is Volna's; anywhere
             // else on its panel it's the app's beneath.
             if let scrawl_capture::capture::InputEvent::ButtonDown { x, y, .. }
             | scrawl_capture::capture::InputEvent::Scroll { x, y, .. } = event
@@ -2621,7 +2621,7 @@ pub enum CaptureControl {
 #[cfg(target_os = "macos")]
 pub fn send_to_listener(control: CaptureControl) -> Result<()> {
     use crate::recognition::RecognitionControl;
-    let runtime = crate::macos_rune::runtime().ok_or_else(|| eyre!("Hex is starting"))?;
+    let runtime = crate::macos_rune::runtime().ok_or_else(|| eyre!("Volna is starting"))?;
     let (reply, _) = mpsc::sync_channel(1);
     runtime
         .recognition(match control {
@@ -2645,9 +2645,9 @@ pub fn send_to_listener(control: CaptureControl) -> Result<()> {
         .lock()
         .unwrap_or_else(|error| error.into_inner())
         .as_ref()
-        .ok_or_else(|| eyre!("Hex is not listening"))?
+        .ok_or_else(|| eyre!("Volna is not listening"))?
         .try_send(control)
-        .map_err(|_| eyre!("Hex is busy; try again"))
+        .map_err(|_| eyre!("Volna is busy; try again"))
 }
 
 /// Makes the calling listener the one capsule commands reach.
@@ -2828,7 +2828,7 @@ impl CaptureShortcut {
         self.armed.is_some()
     }
 
-    /// Whether Hex's tap keeps Escape from the app for captures: only for
+    /// Whether Volna's tap keeps Escape from the app for captures: only for
     /// this press before it records, and for the capsule's picker. (An open
     /// list takes Escape at the session tap.) A recording capture never
     /// takes it, and a send's Undo is a click.
@@ -2848,14 +2848,14 @@ impl CaptureShortcut {
     }
 }
 
-/// The keys the capsule takes from Hex's tap while it is on screen: it never
+/// The keys the capsule takes from Volna's tap while it is on screen: it never
 /// takes focus, so these never reach the app in front.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CapsuleKeys {
     /// The picker: the capture shortcut ([`CapsuleKey::Shortcut`]) and Escape.
     Picker,
     /// The open list: every key press without ⌘ or ⌃ that isn't one of
-    /// Hex's shortcuts.
+    /// Volna's shortcuts.
     List,
     /// A capture's suggestions: the capture shortcut, which opens the
     /// search ([`CapsuleKey::Shortcut`]), Shift, and a mouse press
@@ -2865,7 +2865,7 @@ pub enum CapsuleKeys {
 }
 
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-/// A key the capsule gets from Hex's tap.
+/// A key the capsule gets from Volna's tap.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CapsuleKey {
     /// The capture shortcut: the picker records what it is on, and the
@@ -3014,7 +3014,7 @@ fn takes(keys: CapsuleKeys, key: &CapsuleKey) -> bool {
 /// What the tap does with a key press while the list is open.
 #[derive(Debug, Eq, PartialEq)]
 pub enum ListTap {
-    /// Not the list's: ⌘ or ⌃ held, or one of Hex's shortcuts.
+    /// Not the list's: ⌘ or ⌃ held, or one of Volna's shortcuts.
     Pass,
     /// Kept from the app; the list does nothing with it.
     Swallow,
@@ -3151,7 +3151,7 @@ enum HandOff {
 #[cfg(target_os = "macos")]
 fn hand_off(how: HandOff, bundle: &Path) -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| match how {
-        // ⌘V from Hex's keyboard layout snapshot, marked as Hex's: the
+        // ⌘V from Volna's keyboard layout snapshot, marked as Volna's: the
         // crate's own reads TIS off the main thread.
         HandOff::Paste => scrawl_capture::handoff::paste_bundle_with(bundle, &|| {
             crate::keyboard::post_command('v').map_err(|error| anyhow::anyhow!("{error:#}"))
@@ -3160,7 +3160,7 @@ fn hand_off(how: HandOff, bundle: &Path) -> anyhow::Result<()> {
     })
 }
 
-/// Linux pastes as the Mac does, through Hex's own paste path (Wayland or
+/// Linux pastes as the Mac does, through Volna's own paste path (Wayland or
 /// X11): the contact sheet, then the summary. An app that takes no images
 /// (a terminal) gets only the summary, which names the contact sheet.
 #[cfg(target_os = "linux")]
@@ -3338,7 +3338,7 @@ fn collect(
             let audio = timeline.finish(through, closed);
             let (give_look, look) = mpsc::sync_channel(1);
             // Starts are refused while the queue is full, so it has room
-            // unless Hex is stopping.
+            // unless Volna is stopping.
             let job = FinishJob {
                 bundle: bundle.clone(),
                 capture,
@@ -3666,7 +3666,7 @@ mod tests {
     /// The capsule is one 640×424 panel above everything, but only its pill
     /// takes clicks: a click elsewhere on the panel, or under the
     /// full-screen ink overlay, is a click on the app beneath, while one on
-    /// the pill is Hex's and never reaches the engine.
+    /// the pill is Volna's and never reaches the engine.
     #[test]
     fn only_the_capsules_pill_and_not_its_panel_takes_clicks() {
         use scrawl_capture::windows::RawWindow;
@@ -3860,7 +3860,7 @@ mod tests {
     }
 
     /// Scrawl's engine minus the screen: it writes the bundle with Scrawl's
-    /// own writer from the audio Hex hands it and no frames.
+    /// own writer from the audio Volna hands it and no frames.
     struct FakeEngine {
         transcriber: Arc<dyn Transcriber>,
         starts: Mutex<Vec<Start>>,
@@ -4074,7 +4074,7 @@ mod tests {
         assert!(last.gaps.is_some());
         assert_eq!(last.missing_transcript, None);
 
-        // Hex's audio, on Hex's clock, into Hex's folder; nothing else.
+        // Volna's audio, on Volna's clock, into Volna's folder; nothing else.
         let start = engine.starts.lock().unwrap()[0].clone();
         assert_eq!(start.audio, AudioIn::External);
         assert!(matches!(start.target, Target::ActiveDisplay));
@@ -4642,7 +4642,7 @@ mod tests {
 
     #[cfg(target_os = "macos")]
     /// Kit: Escape may be meant for the app being recorded, so it never
-    /// ends a recording capture, and Hex's tap lets it through.
+    /// ends a recording capture, and Volna's tap lets it through.
     #[test]
     fn escape_never_ends_a_recording_capture() {
         let dir = temp_dir("escape");

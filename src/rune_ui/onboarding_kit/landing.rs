@@ -1,4 +1,4 @@
-//! Shared typography, motion transitions, and the `"Hex is ready"` finale.
+//! Shared typography, motion transitions, and the `"Volna is ready"` finale.
 
 use rune::{El, Spring, SpringPair, TextStyle, Transition, col, el, row, text};
 use rune_kit::{Button, ButtonVariant};
@@ -144,7 +144,7 @@ pub(crate) fn keys(p: Paint, key: &str, caps: &[String], down: bool) -> El {
     )
 }
 
-/// Where Hex lives once onboarding closes, under `"Hex is ready"`.
+/// Where Volna lives once onboarding closes, under `"Volna is ready"`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Home {
     MenuBar,
@@ -162,9 +162,9 @@ impl Home {
     }
 }
 
-/// Final `"Hex is ready"` landing: the thin single-hexagon mark arrives from
+/// Final `"Volna is ready"` landing: the thin single-hexagon mark arrives from
 /// the top pill with a soft outline glow, followed by staggered copy and a
-/// quiet macOS menu-bar preview showing where Hex lives.
+/// quiet macOS menu-bar preview showing where Volna lives.
 pub(crate) fn ready(
     p: Paint,
     caps: &[String],
@@ -191,7 +191,7 @@ pub(crate) fn ready(
                     .gap(10.0)
                     .items_center()
                     .child(
-                        text(tr("Hex is ready"))
+                        text(tr("Volna is ready"))
                             .key("title")
                             .font(title_font(p))
                             .color(p.text()),
@@ -220,7 +220,7 @@ pub(crate) fn hold_anywhere(p: Paint, caps: &[String]) -> El {
         )
 }
 
-/// Quiet capsule previewing the single-hexagon icon where Hex lives: the
+/// Quiet capsule previewing the single-hexagon icon where Volna lives: the
 /// macOS menu bar, the Windows tray, or the Linux app launcher.
 fn menubar_hint(p: Paint, home: Home) -> El {
     let k = p.k;

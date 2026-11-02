@@ -350,6 +350,7 @@ impl Profiles {
         let corrected = profile
             .replacements
             .replace(&self.global.replace(transcript));
+        let corrected = crate::screen_context::correct(&corrected, context, cancelled);
         // A transcript of numbers alone has nothing to rewrite; a model only
         // turns it into digits and re-punctuates it (#949).
         let numbers_only = profile.ai_enabled && numbers_only(&corrected);
@@ -1093,6 +1094,7 @@ mod tests {
             browser_url: url.map(|url| Url::parse(url).unwrap()),
             window_title: None,
             input_revision: None,
+            screen: None,
         }
     }
 

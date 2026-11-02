@@ -1,8 +1,8 @@
-//! GPUs that hung or failed while Hex transcribed on them (#856), remembered
+//! GPUs that hung or failed while Volna transcribed on them (#856), remembered
 //! per device and driver in `gpu-failures.json` in Application Support, so
 //! Auto keeps that GPU off and transcribes on the CPU (or another GPU) until
 //! the driver changes. A GPU context reset or device loss comes back from
-//! ggml as an error, never as something Hex could retry safely on the same
+//! ggml as an error, never as something Volna could retry safely on the same
 //! device: ggml keeps the lost Vulkan device for the process, and asking a
 //! hung driver again can hang the whole desktop's GPU again.
 
@@ -211,7 +211,7 @@ pub(crate) fn device_error(error: &color_eyre::eyre::Report) -> bool {
 /// What a GPU's driver is now, so an update tries it again. Linux: the
 /// kernel (i915, xe, amdgpu, nouveau live there) and every installed Vulkan
 /// driver's library, by size and modification time (a Mesa or vendor
-/// update replaces them). Windows: this build of Hex.
+/// update replaces them). Windows: this build of Volna.
 pub(crate) fn driver() -> String {
     static DRIVER: std::sync::OnceLock<String> = std::sync::OnceLock::new();
     DRIVER.get_or_init(driver_now).clone()

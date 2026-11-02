@@ -21,7 +21,7 @@ use crate::transcription::models::TranscriptionSelection;
 /// How long `model use` waits to confirm, inside the transport's deadline.
 const CONFIRM_WAIT: Duration = Duration::from_secs(8);
 
-/// What the running Hex published last.
+/// What the running Volna published last.
 pub(crate) struct HostState {
     pub(crate) settings: AppSettings,
     pub(crate) listener: DesktopListenerSnapshot,
@@ -61,7 +61,7 @@ pub(crate) trait Host {
     /// Launch at login, after setting it when `enabled` is given; `None`
     /// when this OS has no login item.
     fn launch_at_login(&self, enabled: Option<bool>) -> Option<Result<bool, String>>;
-    /// Quits Hex (and, for `restart`, reopens it) once this reply is out.
+    /// Quits Volna (and, for `restart`, reopens it) once this reply is out.
     fn quit(&self, restart: bool) -> Result<(), ControlError>;
     fn shortcut_rules(&self) -> settings::ShortcutRules;
     /// Annotate's commands, where this OS has a capture engine.
@@ -96,7 +96,7 @@ pub(crate) fn serve(
             }
         });
     if let Err(error) = spawned {
-        tracing::warn!(%error, "`hex` control commands will not reach this Hex");
+        tracing::warn!(%error, "`hex` control commands will not reach this Volna");
     }
 }
 
@@ -121,9 +121,9 @@ fn command(host: &dyn Host, command: ControlCommand) -> ControlReply {
                     .and_then(|()| host.quit(restart))
                     .map(|()| {
                         ControlReply::done(if restart {
-                            "Restarting Hex"
+                            "Restarting Volna"
                         } else {
-                            "Quitting Hex"
+                            "Quitting Volna"
                         })
                     }),
             )
@@ -203,8 +203,8 @@ fn command(host: &dyn Host, command: ControlCommand) -> ControlReply {
         }
         ControlCommand::OnboardingReset => host.onboarding_reset(),
         ControlCommand::HistoryClear => reply(clear_history(host)),
-        ControlCommand::CheckForUpdates => reply(host.state().and_then(|state| {
-            match state.update {
+        ControlCommand::CheckForUpdates => {
+            reply(host.state().and_then(|state| match state.update {
                 DesktopUpdateStatus::Managed => Err(ControlError::new(
                     "unsupported",
                     "updates are managed by your organization",
@@ -213,13 +213,13 @@ fn command(host: &dyn Host, command: ControlCommand) -> ControlReply {
                 | DesktopUpdateStatus::SourceBuild
                 | DesktopUpdateStatus::PackageManager => Err(ControlError::new(
                     "unavailable",
-                    "this Hex build doesn't update itself",
+                    "this Volna build doesn't update itself",
                 )),
-                _ => host
-                    .check_for_updates()
-                    .map(|()| ControlReply::done("Checking for updates; Hex shows what it finds")),
-            }
-        })),
+                _ => host.check_for_updates().map(|()| {
+                    ControlReply::done("Checking for updates; Volna shows what it finds")
+                }),
+            }))
+        }
         ControlCommand::LaunchAtLogin { enabled } => launch_at_login(host, enabled),
         ControlCommand::VocabularyList => reply(load().map(|settings| ControlReply::Vocabulary {
             entries: settings.vocabulary,
@@ -325,7 +325,7 @@ fn meeting(stop: bool, title: Option<String>) -> ControlReply {
     ControlReply::done(if stop {
         "Asked the meeting to stop; `hex status` shows when it's transcribing"
     } else {
-        "Hex is starting the recording; `hex status` shows when it's recording"
+        "Volna is starting the recording; `hex status` shows when it's recording"
     })
 }
 
@@ -424,7 +424,7 @@ fn use_model(
     host.choose_model(selection.clone())?;
     if !installed {
         return Ok(ControlReply::done(format!(
-            "Downloading {} ({}); Hex switches to it once it's ready. \
+            "Downloading {} ({}); Volna switches to it once it's ready. \
              `hex status` shows progress, `hex model cancel` stops it",
             definition.name,
             definition.size_label()

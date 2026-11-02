@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
+    println!("cargo:rerun-if-env-changed=VOLNA_NO_FOUNDATION_MODELS");
     build_version();
     test_build_commit();
     // `hex_capture`: the `capture` experiment's code, in every macOS, Linux,
@@ -56,7 +57,12 @@ fn main() {
         "HEXAppleIntelligenceBridge",
         &["FoundationModels"],
     );
-    println!("cargo:rustc-link-arg=-Wl,-weak_framework,FoundationModels");
+    if std::env::var_os("VOLNA_NO_FOUNDATION_MODELS").is_none() {
+        println!("cargo:rustc-link-arg=-Wl,-weak_framework,FoundationModels");
+    }
+    compile_swift_bridge("screen_context", "VolnaScreenContext", &[]);
+    println!("cargo:rustc-link-lib=framework=Vision");
+    println!("cargo:rustc-link-lib=framework=ScreenCaptureKit");
     compile_swift_bridge("calendar", "HEXCalendarBridge", &[]);
     println!("cargo:rustc-link-lib=framework=EventKit");
     compile_permission_guide();
@@ -248,8 +254,12 @@ fn compile_swift_bridge(name: &str, module: &str, without_autolink: &[&str]) {
     };
     println!("cargo:rerun-if-changed={}", source.display());
     let mut swift = Command::new("xcrun");
+    if name == "apple_intelligence" && std::env::var_os("VOLNA_NO_FOUNDATION_MODELS").is_some() {
+        swift.args(["swiftc", "-D", "VOLNA_NO_FOUNDATION_MODELS"]);
+    } else {
+        swift.arg("swiftc");
+    }
     swift.args([
-        "swiftc",
         "-parse-as-library",
         "-emit-object",
         "-module-name",

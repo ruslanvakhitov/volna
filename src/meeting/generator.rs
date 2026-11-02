@@ -9,7 +9,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
-/// OpenCode's models take far more than any excerpt Hex sends.
+/// OpenCode's models take far more than any excerpt Volna sends.
 const OPENCODE_CONTEXT_TOKENS: usize = 32_000;
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]

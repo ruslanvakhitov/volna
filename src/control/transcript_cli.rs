@@ -46,7 +46,7 @@ pub struct HistoryArgs {
     pub action: Option<HistoryAction>,
 }
 
-/// History changes, carried out by the running Hex (`crate::control`).
+/// History changes, carried out by the running Volna (`crate::control`).
 #[derive(Subcommand, Debug)]
 pub enum HistoryAction {
     /// Delete every retained dictation.
@@ -141,7 +141,7 @@ pub enum MeetingsCommand {
         #[arg(long, default_value_t = 10, value_parser = clap::value_parser!(u32).range(1..=50))]
         limit: u32,
     },
-    /// Start recording a meeting in the running Hex, visibly, as the menu
+    /// Start recording a meeting in the running Volna, visibly, as the menu
     /// bar's Record Meeting does (needs meetings.enabled).
     Record {
         /// The meeting's title (default: the calendar event's, or a
@@ -663,10 +663,10 @@ pub fn meetings(command: &MeetingsCommand) -> Result<()> {
             )?;
             Ok(())
         }
-        // `main` sends these to the running Hex.
+        // `main` sends these to the running Volna.
         MeetingsCommand::Record { .. }
         | MeetingsCommand::Stop { .. }
-        | MeetingsCommand::CopyLast { .. } => Err(eyre!("this command needs the running Hex")),
+        | MeetingsCommand::CopyLast { .. } => Err(eyre!("this command needs the running Volna")),
     }
 }
 

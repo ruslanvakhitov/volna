@@ -1,6 +1,6 @@
-//! Links that open the window on a page: `hex://labs`,
-//! `hex://labs/<feature>` (`hex labs link <feature>` prints it), and
-//! `hex://settings/<pane>` (`hex-test://` in a test build). A Labs link
+//! Links that open the window on a page: `volna://labs`,
+//! `volna://labs/<feature>` (`hex labs link <feature>` prints it), and
+//! `volna://settings/<pane>` (`volna-test://` in a test build). A Labs link
 //! scrolls to the feature's row and pulses it; it never turns the feature on.
 //! Story links live in `story_link`.
 
@@ -19,7 +19,7 @@ pub(crate) enum Target {
     Settings(String),
 }
 
-/// The main panes a `hex://settings/<pane>` link names.
+/// The main panes a `volna://settings/<pane>` link names.
 const PANES: [(&str, Pane); 5] = [
     ("general", Pane::General),
     ("output", Pane::Output),
@@ -82,7 +82,7 @@ pub(crate) fn open(ui: &mut Ui, target: Target, tx: &mut Tx) {
                     ui.select_pane(pane, tx);
                 }
                 _ => {
-                    tracing::warn!(pane = %name, "a settings link named no pane this Hex shows");
+                    tracing::warn!(pane = %name, "a settings link named no pane this Volna shows");
                     super::show(ui, super::Destination::Settings, tx);
                 }
             }
@@ -96,23 +96,23 @@ mod tests {
     use crate::labs::Feature;
 
     fn read(link: &str) -> Option<Result<Target, String>> {
-        parse(link, "hex")
+        parse(link, "volna")
     }
 
     #[test]
     fn reads_labs_links() {
-        assert_eq!(read("hex://labs"), Some(Ok(Target::Labs(None))));
-        assert_eq!(read("hex://labs/"), Some(Ok(Target::Labs(None))));
+        assert_eq!(read("volna://labs"), Some(Ok(Target::Labs(None))));
+        assert_eq!(read("volna://labs/"), Some(Ok(Target::Labs(None))));
         assert_eq!(
-            read("hex://labs/live-text"),
+            read("volna://labs/live-text"),
             Some(Ok(Target::Labs(Some("live-text".into()))))
         );
         assert_eq!(
-            read("hex://labs/Live-Text/"),
+            read("volna://labs/Live-Text/"),
             Some(Ok(Target::Labs(Some("live-text".into()))))
         );
         assert_eq!(
-            parse("hex-test://labs/meetings", "hex-test"),
+            parse("volna-test://labs/meetings", "volna-test"),
             Some(Ok(Target::Labs(Some("meetings".into()))))
         );
     }
@@ -120,33 +120,33 @@ mod tests {
     #[test]
     fn reads_settings_links() {
         assert_eq!(
-            read("hex://settings/history"),
+            read("volna://settings/history"),
             Some(Ok(Target::Settings("history".into())))
         );
-        assert!(matches!(read("hex://settings"), Some(Err(_))));
-        assert!(matches!(read("hex://labs/%FF"), Some(Err(_))));
+        assert!(matches!(read("volna://settings"), Some(Err(_))));
+        assert!(matches!(read("volna://labs/%FF"), Some(Err(_))));
     }
 
     #[test]
     fn leaves_other_links_alone() {
         for other in [
-            "hex://story/hud/processing",
-            "hex-test://labs/live-text",
+            "volna://story/hud/processing",
+            "volna-test://labs/live-text",
             "https://labs/live-text",
-            "hex://elsewhere",
+            "volna://elsewhere",
             "not a link",
             "",
         ] {
             assert_eq!(read(other), None, "{other}");
         }
-        let long = format!("hex://labs/{}", "a".repeat(MAX_LINK));
+        let long = format!("volna://labs/{}", "a".repeat(MAX_LINK));
         assert_eq!(read(&long), None);
     }
 
     #[test]
     fn every_feature_has_a_link_that_reads_back() {
         for feature in Feature::ALL {
-            let link = labs_link("hex", feature);
+            let link = labs_link("volna", feature);
             assert_eq!(
                 read(&link),
                 Some(Ok(Target::Labs(Some(feature.name().into())))),

@@ -692,7 +692,7 @@ fn wait_for_dictation_idle() -> Result<()> {
         thread::sleep(std::time::Duration::from_millis(50));
     }
     if crate::desktop::process_exit::quitting() {
-        return Err(eyre!("Hex is quitting"));
+        return Err(eyre!("Volna is quitting"));
     }
     Ok(())
 }

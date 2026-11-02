@@ -72,6 +72,7 @@ impl PendingContext {
             browser_url,
             window_title: None,
             input_revision: None,
+            screen: None,
         }
     }
 }

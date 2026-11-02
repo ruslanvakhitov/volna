@@ -42,6 +42,7 @@ pub(super) fn pane(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> El {
     }
     content = content
         .child(basics(ui, p, layer))
+        .children(super::context::section(ui, p))
         .child(advanced_toggle(ui, p, Pane::General));
     if advanced_open(ui, Pane::General) {
         content = content
@@ -92,9 +93,9 @@ fn basics(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> El {
                 p,
                 "second-dictation-shortcut",
                 &KEYBOARD,
-                tr("Second dictation shortcut"),
+                tr("Contextual dictation"),
                 ShortcutTarget::SecondDictation,
-                Some(tr("Dictates like the shortcut above")),
+                Some(tr("Read the screen while speaking; learn this app’s terms")),
             ));
         }
         // Annotate's shortcut beside dictation's on Linux, where the desktop
@@ -121,7 +122,7 @@ fn basics(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> El {
         super::picker::open,
     );
     let (description, control) = match missing_model(ui) {
-        // Hex can't listen without the selected model: say so, with the
+        // Volna can't listen without the selected model: say so, with the
         // download's progress, or Download and Add model file… when none
         // runs, as after Continue without a model (#894).
         Some(progress) => {
@@ -130,7 +131,7 @@ fn basics(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> El {
                 super::model_import::download_failure(ui),
             ) {
                 (Some(_), _) => (
-                    tr("Hex can't listen until the speech model has downloaded").to_string(),
+                    tr("Volna can't listen until the speech model has downloaded").to_string(),
                     p.muted(),
                 ),
                 (None, Some(error)) => {
@@ -207,13 +208,13 @@ fn basics(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> El {
 }
 
 /// The selected speech model's download, while it is not installed, so
-/// Hex can't listen yet. Fixtures that name no installed models say nothing,
+/// Volna can't listen yet. Fixtures that name no installed models say nothing,
 /// so their rows never depend on this machine's models.
 pub(super) fn missing_model(ui: &Ui) -> Option<crate::desktop::onboarding::ModelProgress> {
     if !ui.live() && ui.picker.installed.is_none() {
         return None;
     }
-    // A saved import that is missing or changed: Hex listens with a
+    // A saved import that is missing or changed: Volna listens with a
     // downloaded model in its place, and the row's notice says how to fix it.
     if ui.settings.transcription.model.is_labs_gated()
         && super::model_import::selection_notice(ui).is_some()
@@ -320,7 +321,7 @@ pub(super) fn shortcut_rows(
 }
 
 /// Toggle's cancel shortcut. A shortcuts portal would hold its key from
-/// every app for as long as Hex runs, so on Wayland it says to bind
+/// every app for as long as Volna runs, so on Wayland it says to bind
 /// `hex dictation cancel` in the desktop instead.
 fn cancel_rows(ui: &Ui, p: Paint) -> Vec<CardRow> {
     if matches!(
@@ -364,7 +365,7 @@ fn configure_shortcuts_row(ui: &Ui, p: Paint) -> Option<El> {
                 "configure-shortcuts",
                 &KEYBOARD,
                 tr("Desktop shortcuts"),
-                Some(tr("Change the keys your desktop gave Hex")),
+                Some(tr("Change the keys your desktop gave Volna")),
                 button(
                     p,
                     "configure-shortcuts-control",
@@ -401,7 +402,7 @@ fn microphone_release_row(ui: &Ui, p: Paint) -> CardRow {
 }
 
 /// Labs › Also pause the browser's permission, under Pause media on macOS:
-/// Hex hears the browser through System Audio Recording, asked for here,
+/// Volna hears the browser through System Audio Recording, asked for here,
 /// never while you dictate.
 fn pause_browser_rows(ui: &Ui, p: Paint) -> Vec<El> {
     let on = ui.settings.pause_browser_media;
@@ -419,7 +420,7 @@ fn pause_browser_rows(ui: &Ui, p: Paint) -> Vec<El> {
             "pause-browser-audio",
             &SPEAKER,
             tr("Screen & System Audio Recording"),
-            Some(tr("Lets Hex hear whether a tab is playing")),
+            Some(tr("Lets Volna hear whether a tab is playing")),
             permission_control(
                 p,
                 "pause-browser-allow",
@@ -513,7 +514,7 @@ fn microphone_rows(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> Vec<CardRow> {
     let mac = ui.platform.caps.os == super::platform::Os::Macos;
     let lid_note = |built_in: &str| match default_name {
         Some(name) => tr_named(
-            "{built_in} is off while the lid is closed, so Hex listens to {input}",
+            "{built_in} is off while the lid is closed, so Volna listens to {input}",
             &[("built_in", built_in), ("input", name)],
         ),
         None => tr_fill("{} is off while the lid is closed", built_in),
@@ -529,7 +530,7 @@ fn microphone_rows(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> Vec<CardRow> {
         }),
         None if devices.default_is_hex_microphone => default_name.map(|name| {
             tr_fill(
-                "Hex Microphone is the system default, so Hex listens to {}",
+                "Volna Microphone is the system default, so Volna listens to {}",
                 name,
             )
         }),
@@ -540,7 +541,7 @@ fn microphone_rows(ui: &Ui, p: Paint, layer: &mut Vec<El>) -> Vec<CardRow> {
             .zip(default_name)
             .map(|(bluetooth, input)| {
                 tr_named(
-                    "{bluetooth} is Bluetooth, so Hex listens to {input}",
+                    "{bluetooth} is Bluetooth, so Volna listens to {input}",
                     &[("bluetooth", bluetooth), ("input", input)],
                 )
             }),
@@ -636,7 +637,7 @@ fn shown_level(level: f32) -> f32 {
     f32::from(level_step(level)) / LEVEL_STEPS
 }
 const MIC_LEVEL: f32 = 14.0;
-/// Three short bars, as tall as Hex hears it.
+/// Three short bars, as tall as Volna hears it.
 fn mic_bars(p: Paint, level: f32, tint: Color) -> El {
     const WEIGHTS: [f32; 3] = [0.6, 1.0, 0.75];
     let mut bars = row()
@@ -659,7 +660,7 @@ fn mic_bars(p: Paint, level: f32, tint: Color) -> El {
 
 const LEVEL_FRAME: Duration = Duration::from_millis(33);
 
-/// What the microphone row's level shows: the audio Hex receives from the
+/// What the microphone row's level shows: the audio Volna receives from the
 /// microphone in use, or nothing while none arrives (released while idle,
 /// failed, or not allowed), as flat, dimmed bars.
 pub(super) struct MicLevel {

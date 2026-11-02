@@ -26,7 +26,7 @@ pub(crate) struct Follow {
     /// to save it, not to start it.
     began: bool,
     /// The settled capture the previous snapshot held: `None` before the
-    /// first snapshot, so an outcome from before Hex started moves nothing.
+    /// first snapshot, so an outcome from before Volna started moves nothing.
     last_seen: Option<Option<PathBuf>>,
     /// The captures the previous snapshot held recording or finishing: a
     /// failure among them is a background capture's, never a start's.
@@ -43,7 +43,7 @@ impl Follow {
     /// shortcut started it on the pointer's display; its first click,
     /// scroll, or stroke folds them. A start that failed before any
     /// snapshot showed it recording still shows its failure. A capture it
-    /// never showed otherwise (one that settled before Hex started, or one a
+    /// never showed otherwise (one that settled before Volna started, or one a
     /// chip discarded) moves nothing.
     pub(crate) fn next(&mut self, snapshot: &CaptureSnapshot) -> Vec<Input> {
         let mut inputs = Vec::new();
@@ -489,7 +489,7 @@ pub(crate) fn act(action: Action) {
     }
 }
 
-/// Whether this Hex can't record the screen now, read afresh.
+/// Whether this Volna can't record the screen now, read afresh.
 fn screen_off() -> bool {
     crate::capture_host::permission_state(CaptureNeed::ScreenRecording, true).is_some()
 }
@@ -500,7 +500,7 @@ fn show_helper(capsule: &CaptureCapsule, need: CaptureNeed) {
     watch_grant(capsule.clone(), need);
 }
 
-/// The pointer. Wayland tells Hex nothing of it: the portal picks the
+/// The pointer. Wayland tells Volna nothing of it: the portal picks the
 /// screen.
 #[cfg(target_os = "linux")]
 fn pointer() -> [f64; 2] {

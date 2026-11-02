@@ -500,6 +500,16 @@ pub(super) fn legacy_default_key() -> Option<HotkeyKey> {
 }
 
 impl HotkeyBinding {
+    pub fn context_default() -> Option<Self> {
+        cfg!(target_os = "macos").then_some(Self {
+            modifiers: HotkeyModifiers {
+                command: Some(ModifierSide::Right),
+                ..Default::default()
+            },
+            key: None,
+        })
+    }
+
     /// The chord's keys in a fixed order: fn, Control, Option, Shift,
     /// Command (left before right), then the key.
     pub fn chord_keys(&self) -> Vec<ChordKey> {
@@ -675,7 +685,7 @@ impl HotkeyBinding {
 
     /// Option-Shift-S, Scrawl's capture shortcut; F9 on Linux. Annotate's
     /// one key is held to draw while the other hand moves the mouse, so on
-    /// Linux it's a single key one hand holds easily: F9 is free in Hex's
+    /// Linux it's a single key one hand holds easily: F9 is free in Volna's
     /// defaults (Alt+Space, Ctrl+Alt+V) and in the common desktops', where
     /// F10 opens GTK's menu bar, F11 is full screen and F12 is often a
     /// dropdown terminal.
@@ -1018,12 +1028,12 @@ pub struct RuntimeHotkeys {
     /// Labs › Second dictation shortcut (macOS), while it is on and bound.
     pub second_dictation: Option<RuntimeHotkey>,
     /// Toggle mode's cancel shortcut. Not among [`RuntimeHotkeys::all`]:
-    /// Hex takes it only while a toggled recording runs.
+    /// Volna takes it only while a toggled recording runs.
     pub cancel: Option<RuntimeHotkey>,
 }
 
 impl RuntimeHotkeys {
-    /// Every shortcut Hex matches, for suppression and chord evidence.
+    /// Every shortcut Volna matches, for suppression and chord evidence.
     pub fn all(self) -> [Option<RuntimeHotkey>; 6] {
         [
             Some(self.dictation),

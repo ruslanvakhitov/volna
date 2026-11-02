@@ -261,3 +261,9 @@ line_icon!(
         "m9 9 6 6"
     ]
 );
+
+line_icon!(
+    VOLNA,
+    "volna-wave-mark",
+    ["M3 9c3-6 6 6 9 0s6 6 9 0", "M3 15c3-6 6 6 9 0s6 6 9 0"]
+);

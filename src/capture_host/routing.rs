@@ -1,7 +1,7 @@
 //! Where a written capture goes among OpenCode sessions: Scrawl's router
-//! (`crates/router`) run in Hex's process with `capture.routing` and
+//! (`crates/router`) run in Volna's process with `capture.routing` and
 //! Scrawl's own router folders, so `scrawl router undo`, Scrawl's rule
-//! offers, and its evals see Hex's sends as Scrawl's.
+//! offers, and its evals see Volna's sends as Scrawl's.
 //!
 //! The collector starts a [`Look`] at the tab, terminal, and sessions the
 //! moment a capture stops, beside its writing. Once it is written, the
@@ -141,7 +141,7 @@ pub enum RouteDelivery {
 // ---------------------------------------------------------------------------
 // The router.
 
-/// The router with Hex's `capture.routing` and Scrawl's folders under
+/// The router with Volna's `capture.routing` and Scrawl's folders under
 /// `~/Library/Application Support/scrawl`. Never reads
 /// `~/.config/scrawl`. Its own log lines name sites and sessions, so they
 /// go to tracing's debug level, except how sends went (`deliver: …`).
@@ -2124,7 +2124,7 @@ mod tests {
             }
         }
 
-        /// With smart routing, a capture of an app (Hex's own Settings among them) suggests the
+        /// With smart routing, a capture of an app (Volna's own Settings among them) suggests the
         /// open session whose checkout is named like the app, and sends nothing until it's
         /// picked, however confident sends may be. The port ladder doesn't read the app.
         #[test]

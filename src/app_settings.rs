@@ -204,7 +204,7 @@ impl MeetingRetention {
 #[serde(default)]
 pub struct CalendarSettings {
     /// Set once the user clicks Connect calendar and macOS grants access;
-    /// Hex never asks for calendar access before that.
+    /// Volna never asks for calendar access before that.
     pub connected: bool,
     /// Calendars left out of reminders, by EventKit identifier. Every
     /// calendar is included by default, so new ones are too.
@@ -267,7 +267,7 @@ pub const KNOWN_MEETING_PROVIDERS: [(&str, &str); 7] = [
     ("com.gather.GatherV2", "Gather"),
 ];
 
-/// What Hex does when it detects a call from a provider.
+/// What Volna does when it detects a call from a provider.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MeetingPolicy {
@@ -438,7 +438,7 @@ impl Default for LabsSettings {
             spoken_formatting: false,
             filler_words: false,
             subtitle_export: false,
-            second_dictation_shortcut: false,
+            second_dictation_shortcut: cfg!(target_os = "macos"),
             smart_spacing: false,
             spoken_symbols: false,
             picker_sort_filter: false,
@@ -461,8 +461,8 @@ impl Default for LabsSettings {
     }
 }
 
-/// Whether the Voice Filter runs: the listener streams the Hex Microphone
-/// and Hex watches its driver. Its Labs toggle (`experimental.hex_microphone`,
+/// Whether the Voice Filter runs: the listener streams the Volna Microphone
+/// and Volna watches its driver. Its Labs toggle (`experimental.hex_microphone`,
 /// or `HEX_EXPERIMENTAL_MIC`) or an installed driver turns it on, so a driver
 /// apps already use keeps receiving audio.
 pub fn voice_filter_enabled(setting: bool, driver_installed: bool) -> bool {
@@ -480,9 +480,9 @@ pub fn default_meeting_output_folder() -> PathBuf {
         .or_else(|| dirs::home_dir().map(|home| home.join("Documents")))
         .unwrap_or_else(|| PathBuf::from("."))
         .join(if crate::app_paths::is_macos_test_build() {
-            "Hex Test Meetings"
+            "Volna Test Meetings"
         } else {
-            "Hex Meetings"
+            "Volna Meetings"
         })
 }
 
@@ -554,7 +554,7 @@ pub enum RecordingAudioBehavior {
     DoNothing,
 }
 
-/// Annotate: Scrawl's captures inside Hex, on macOS, Linux, and Windows
+/// Annotate: Scrawl's captures inside Volna, on macOS, Linux, and Windows
 /// (`capture_host`). On by default; off means no capture work at all.
 #[cfg(hex_capture)]
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -575,7 +575,7 @@ pub struct CaptureSettings {
     /// Where a written capture is sent among OpenCode sessions: Scrawl's
     /// router settings, imported once from Scrawl.
     pub routing: CaptureRouting,
-    /// Lets screen recordings, Hex's own captures included, show Hex's
+    /// Lets screen recordings, Volna's own captures included, show Volna's
     /// overlays: the capture capsule, picker, and ink, the dictation HUD,
     /// and the meeting capsules. Off keeps them out (`capture_host`).
     pub show_overlays_in_recordings: bool,
@@ -595,12 +595,9 @@ pub enum CapsuleFlow {
     /// (b) One quiet line, "Send to SEER ⏎"; ⇥ moves to the next guess.
     Toast,
     /// (c) A short hint of the guesses in the capsule, which then folds
-    /// into Hex's menu-bar item.
+    /// into Volna's menu-bar item.
     MenuBar,
-    /// (d) The guesses in a small card at the pointer.
     Cursor,
-    /// (e) A pill hanging from the top edge that grows down into the
-    /// guesses.
     Notch,
 }
 
@@ -698,7 +695,7 @@ impl CaptureSettings {
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CaptureTranscriber {
-    /// The dictation model Hex already has loaded, with word times.
+    /// The dictation model Volna already has loaded, with word times.
     #[default]
     Parakeet,
     /// Apple's speech recognizer, as Scrawl uses by default.
@@ -781,7 +778,7 @@ pub struct AppSettings {
     )]
     pub retired_edit_hotkey: Option<serde_json::Value>,
     pub paste_last_hotkey: Option<HotkeyBinding>,
-    /// Toggle mode's cancel shortcut: discards the recording. Hex takes it
+    /// Toggle mode's cancel shortcut: discards the recording. Volna takes it
     /// only while a toggled recording runs; Hold mode has no cancel.
     pub cancel_hotkey: HotkeyBinding,
     /// Dictate without processing: records like the dictation shortcut and
@@ -818,12 +815,12 @@ pub struct AppSettings {
     pub experimental: ExperimentalSettings,
     /// The Labs features' own switches (`crate::labs`).
     pub labs: LabsSettings,
-    /// Start listening when Hex opens (Windows and Linux, where the
+    /// Start listening when Volna opens (Windows and Linux, where the
     /// listener can be off).
     pub enable_on_launch: bool,
     /// Paste with Ctrl-Shift-V for terminals (Linux and Windows).
     pub paste_with_shift: bool,
-    /// Hex keeps its own GNOME custom keyboard shortcuts, on GNOME without a
+    /// Volna keeps its own GNOME custom keyboard shortcuts, on GNOME without a
     /// shortcuts portal (Linux, #781).
     pub gnome_keyboard_shortcuts: bool,
     /// Let other apps see the dictation shortcut's key presses too
@@ -860,7 +857,7 @@ const STREAMING_ENGLISH_MIGRATION: &str = "streaming-english-model";
 /// Annotate became a default feature: on for everyone once.
 #[cfg(hex_capture)]
 const ANNOTATE_DEFAULT_MIGRATION: &str = "annotate-on-by-default";
-/// Settings saved by an `anomaly.hex` build. Up to 2.3.1 Hex was
+/// Settings saved by an `com.ruslan.volna` build. Up to 2.3.1 Volna was
 /// `com.kitlangton.hex2` and used the same folder, so a file without this
 /// ID may carry onboarding finished under grants macOS no longer gives the
 /// new identity; the macOS launch checks setup once
@@ -921,7 +918,7 @@ impl Default for AppSettings {
             paste_last_hotkey: Some(HotkeyBinding::paste_last_default()),
             cancel_hotkey: HotkeyBinding::cancel_default(),
             raw_dictation_hotkey: None,
-            second_dictation_hotkey: None,
+            second_dictation_hotkey: HotkeyBinding::context_default(),
             show_dock_icon: true,
             transcription: default_transcription(),
             transcription_device: TranscriptionDevice::Auto,
@@ -1107,7 +1104,7 @@ impl AppSettings {
     /// Reads Scrawl's settings into `capture`, never writing Scrawl's
     /// files: `engine` is `~/.config/scrawl/config.json` (transcriber,
     /// captures folder, retention) and `app` is the app's shortcut file.
-    /// Missing or unreadable values keep Hex's defaults.
+    /// Missing or unreadable values keep Volna's defaults.
     #[cfg(hex_capture)]
     fn import_scrawl_settings(&mut self, engine: Option<&[u8]>, app: Option<&[u8]>) {
         if let Some(config) = engine.and_then(|bytes| {
@@ -1408,7 +1405,7 @@ impl AppSettings {
         self.migrations.iter().any(|applied| applied == id)
     }
 
-    /// Whether these settings come from before the `anomaly.hex` identity.
+    /// Whether these settings come from before the `com.ruslan.volna` identity.
     #[cfg(target_os = "macos")]
     pub(crate) fn predates_anomaly_identity(&self) -> bool {
         !self.has_migration(ANOMALY_IDENTITY_MIGRATION)
@@ -1502,7 +1499,7 @@ impl AppSettings {
 
     /// Labs › Second dictation shortcut's binding while it takes effect:
     /// macOS, its toggle on, bound, and sharing no key with another active
-    /// shortcut. Otherwise Hex matches, suppresses, and checks nothing for
+    /// shortcut. Otherwise Volna matches, suppresses, and checks nothing for
     /// it.
     pub fn active_second_dictation_hotkey(&self) -> Option<&HotkeyBinding> {
         if !cfg!(target_os = "macos") || !self.labs.second_dictation_shortcut {
@@ -1918,7 +1915,7 @@ pub fn capture_on() -> bool {
     CAPTURE_ON.load(Ordering::Acquire)
 }
 
-/// Scrawl's own app is running, so it owns the capture shortcut and Hex
+/// Scrawl's own app is running, so it owns the capture shortcut and Volna
 /// doesn't match it.
 #[cfg(hex_capture)]
 pub fn scrawl_app_running() -> bool {
@@ -1939,7 +1936,7 @@ pub fn set_hotkey_capture_active(active: bool) {
 }
 
 /// The Dock policy while no Settings window is open. An open window always
-/// shows the icon: hiding it deactivates Hex asynchronously, which would drop
+/// shows the icon: hiding it deactivates Volna asynchronously, which would drop
 /// that window behind other applications.
 pub fn dock_icon_visible(show_dock_icon: bool, status_item_available: bool) -> bool {
     show_dock_icon || !status_item_available
@@ -1965,7 +1962,7 @@ pub fn set_dock_icon_visible(visible: bool) {
 #[cfg(target_os = "macos")]
 pub fn hide_application() {
     let Some(marker) = MainThreadMarker::new() else {
-        tracing::warn!("cannot hide Hex outside the main thread");
+        tracing::warn!("cannot hide Volna outside the main thread");
         return;
     };
     NSApplication::sharedApplication(marker).hide(None);
@@ -2093,9 +2090,9 @@ mod tests {
             ..AppSettings::default()
         })
         .unwrap();
-        file["transcription"]["recognition_hints"] = "Hex, rune\nKaffar".into();
+        file["transcription"]["recognition_hints"] = "Volna, rune\nKaffar".into();
         file["transcription_recents"] = serde_json::json!([
-            {"model": "parakeet_v3", "language": "de", "recognition_hints": "Old; Hex"},
+            {"model": "parakeet_v3", "language": "de", "recognition_hints": "Old; Volna"},
             {"model": "qwen3_asr06_b", "language": "en", "recognition_hints": "Rodolfo"},
         ]);
         fs::write(&dir.path, serde_json::to_vec(&file).unwrap()).unwrap();
@@ -2105,7 +2102,7 @@ mod tests {
             .iter()
             .map(|entry| entry.term.as_str())
             .collect();
-        assert_eq!(terms, ["Rune", "Hex", "Kaffar", "Rodolfo", "Old"]);
+        assert_eq!(terms, ["Rune", "Volna", "Kaffar", "Rodolfo", "Old"]);
         assert_eq!(loaded.vocabulary[0].sounds_like, ["rune's"]);
         assert_eq!(loaded.sound_effect_volume, 0.25);
         let written = fs::read_to_string(&dir.path).unwrap();
@@ -2132,6 +2129,7 @@ mod tests {
             second_dictation_hotkey: Some(function.clone()),
             ..AppSettings::default()
         };
+        settings.labs.second_dictation_shortcut = false;
         assert!(!settings.labs.second_dictation_shortcut);
         assert_eq!(settings.runtime_hotkeys().second_dictation, None);
         assert!(!settings.hotkey_in_use(HotkeySlot::RawDictation, &function));
@@ -2305,7 +2303,7 @@ mod tests {
             settings
                 .meetings
                 .resolved_output_folder()
-                .ends_with("Hex Meetings")
+                .ends_with("Volna Meetings")
         );
         assert!(settings.text_replacements.is_empty());
     }

@@ -1,4 +1,4 @@
-//! Hex on macOS (`hex app`): one menu-bar process.
+//! Volna on macOS (`hex app`): one menu-bar process.
 //!
 //! - The main thread runs Rune's event loop (`rune::App`, windowless and
 //!   kept running, as an accessory app) and, beside it on the same AppKit
@@ -183,11 +183,11 @@ impl RuntimeHandle {
             // choice, so it cannot later undo the newer manual choice.
             self.requests
                 .send(Request::InputSourceChanged(source))
-                .map_err(|_| eyre!("Hex's runtime stopped"))?;
+                .map_err(|_| eyre!("Volna's runtime stopped"))?;
         }
         self.requests
             .send(request)
-            .map_err(|_| eyre!("Hex's runtime stopped"))
+            .map_err(|_| eyre!("Volna's runtime stopped"))
     }
 
     pub(crate) fn published(&self) -> Option<Arc<Published>> {
@@ -237,7 +237,7 @@ pub(crate) fn update_status() -> DesktopUpdateStatus {
     )
 }
 
-/// Quits Hex from any thread.
+/// Quits Volna from any thread.
 pub(crate) fn quit() {
     if let Some(window) = WINDOW.get() {
         window.quit();
@@ -268,19 +268,24 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|error| error.into_inner())
 }
 
-/// Asks a running 2.3.1 or Swift Hex to quit once this Hex is ready to
+/// Asks a running 2.3.1 or Swift Volna to quit once this Volna is ready to
 /// listen, so the two never answer the same shortcut. The old app stays
 /// installed.
 fn quit_legacy_hex() {
     objc2::rc::autoreleasepool(|_| {
-        for bundle_id in crate::desktop::onboarding::LEGACY_MAC_BUNDLE_IDS {
+        for bundle_id in [
+            "anomaly.hex",
+            "com.kitlangton.hex2",
+            "com.kitlangton.Hex",
+            "com.kitlangton.Hex.debug",
+        ] {
             for app in objc2_app_kit::NSRunningApplication::runningApplicationsWithBundleIdentifier(
                 &NSString::from_str(bundle_id),
             ) {
                 if app.terminate() {
-                    tracing::info!(bundle_id, "asked the old Hex to quit");
+                    tracing::info!(bundle_id, "asked the old Volna to quit");
                 } else {
-                    tracing::warn!(bundle_id, "the old Hex did not agree to quit");
+                    tracing::warn!(bundle_id, "the old Volna did not agree to quit");
                 }
             }
         }
@@ -432,7 +437,7 @@ pub fn run(shutdown: &'static AtomicBool, listener: ListenerConfig) -> Result<()
     };
     RUNTIME
         .set(handle.clone())
-        .map_err(|_| eyre!("the Hex runtime already started"))?;
+        .map_err(|_| eyre!("the Volna runtime already started"))?;
     let runtime_settings = settings.clone();
     let runtime = thread::Builder::new()
         .name("hex-runtime".into())
@@ -463,7 +468,7 @@ pub fn run(shutdown: &'static AtomicBool, listener: ListenerConfig) -> Result<()
     }
     let window = app.handle();
     let _ = WINDOW.set(window.clone());
-    // The status item is created inside the loop; Hex can't run without a
+    // The status item is created inside the loop; Volna can't run without a
     // way back to its window, so a failed item opens the window there.
     let open_at_launch = settings_error.is_some()
         || crate::meeting::watcher::should_open_app_on_launch(
@@ -862,7 +867,7 @@ struct Launch {
 }
 
 /// AppKit's terminate (the quit Apple event, logout) calls `exit` right after
-/// this notification, so Hex finishes there ([`crate::desktop::process_exit`]).
+/// this notification, so Volna finishes there ([`crate::desktop::process_exit`]).
 fn observe_termination(target: &MenuTarget) {
     // SAFETY: the target outlives the observer (kept in LAUNCH, then PUMP,
     // for the app's life), and the selector matches its method.
@@ -891,7 +896,7 @@ fn start_main_thread_after(seconds: f64) {
 /// the pump's timer; the first call does, later ones do nothing.
 fn start_main_thread() {
     let Some(mtm) = MainThreadMarker::new() else {
-        tracing::error!("Hex's main-thread setup ran off the main thread");
+        tracing::error!("Volna's main-thread setup ran off the main thread");
         return;
     };
     let Some(Launch { mut pump, target }) = LAUNCH.with(|slot| slot.borrow_mut().take()) else {
@@ -900,7 +905,7 @@ fn start_main_thread() {
     pump.status_actions = match crate::macos_rune::status_item::install() {
         Ok(actions) => Some(actions),
         Err(error) => {
-            tracing::error!(%error, "could not install Hex status item; opening the window");
+            tracing::error!(%error, "could not install Volna status item; opening the window");
             show(&pump.window, Destination::Settings);
             None
         }
@@ -982,7 +987,7 @@ pub(crate) fn bring_window_forward() {
 
 fn bring_forward(window: &rune::AppHandle<Ui>) {
     // An open window always shows the Dock icon: hiding it
-    // would deactivate Hex and drop the window behind other apps.
+    // would deactivate Volna and drop the window behind other apps.
     crate::app_settings::set_dock_icon_visible(true);
     if let Some(mtm) = MainThreadMarker::new() {
         let app = NSApplication::sharedApplication(mtm);
@@ -1362,7 +1367,7 @@ fn with_window(f: impl FnOnce(&rune::AppHandle<Ui>)) {
     }
 }
 
-/// The menu bar while the window is active: Hex, File, View (with the
+/// The menu bar while the window is active: Volna, File, View (with the
 /// Labs), Window.
 /// Rune draws no Edit menu items, so ⌘C/⌘V reach its text fields as keys.
 fn install_main_menu(target: &MenuTarget, mtm: MainThreadMarker) {

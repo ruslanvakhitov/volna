@@ -176,7 +176,7 @@ fn a_refused_portal_shortcut_says_how_to_free_it() {
 }
 
 /// #635: Hyprland's portal names no trigger, since its config binds the
-/// keys, so the row says Hex can't confirm it and shows no refusal.
+/// keys, so the row says Volna can't confirm it and shows no refusal.
 #[test]
 fn an_unconfirmed_portal_shortcut_is_not_called_refused() {
     let mut rt = runtime("portal", true, GOLDEN_SIZE);
@@ -193,7 +193,7 @@ fn an_unconfirmed_portal_shortcut_is_not_called_refused() {
     assert!(
         shown
             .iter()
-            .any(|text| text == "Your desktop assigns this key itself, so Hex can't confirm it")
+            .any(|text| text == "Your desktop assigns this key itself, so Volna can't confirm it")
     );
     assert!(
         !shown
@@ -2000,7 +2000,7 @@ fn onboarding_downloads_the_model_through_the_service() {
             ..
         }]
     ));
-    assert!(texts(&rt).contains(&"Setting up Hex".to_owned()));
+    assert!(texts(&rt).contains(&"Setting up Volna".to_owned()));
     // The service finishes: the model is installed and the practice opens.
     rt.state.picker.installed = Some(vec![TranscriptionModelId::ParakeetUnifiedEnglish]);
     settle(&mut rt);
@@ -2008,10 +2008,10 @@ fn onboarding_downloads_the_model_through_the_service() {
     settle(&mut rt);
     let step = |rt: &Runtime<Ui>| rt.state.tour.as_ref().unwrap().flow.step();
     assert_eq!(step(&rt), crate::desktop::onboarding::Step::TryIt);
-    // The practice can be left with Done; Start using Hex closes onboarding.
+    // The practice can be left with Done; Start using Volna closes onboarding.
     tap(&mut rt, "done");
     tap(&mut rt, "start-using-hex");
-    assert!(rt.state.tour.is_none(), "Start using Hex closes setup");
+    assert!(rt.state.tour.is_none(), "Start using Volna closes setup");
     assert!(rt.state.first_run.is_none());
 }
 
@@ -2021,7 +2021,7 @@ fn a_found_model_moves_on_without_a_download_and_back_returns_to_it() {
     assert!(rt.find("model-list").is_some());
     tap(&mut rt, "model1");
     // The service saves the pick and has the found file ready: the list
-    // stays, with no "Setting up Hex" download page.
+    // stays, with no "Setting up Volna" download page.
     rt.state.settings.transcription = TranscriptionSelection {
         model: TranscriptionModelId::ParakeetV3,
         language: "en".into(),
@@ -2033,7 +2033,7 @@ fn a_found_model_moves_on_without_a_download_and_back_returns_to_it() {
         shown.contains(&"Choose a speech model".to_owned()),
         "{shown:?}"
     );
-    assert!(!shown.contains(&"Setting up Hex".to_owned()), "{shown:?}");
+    assert!(!shown.contains(&"Setting up Volna".to_owned()), "{shown:?}");
     assert!(
         shown.contains(&"Parakeet Unified English".to_owned()),
         "the rows stay"
@@ -2043,7 +2043,7 @@ fn a_found_model_moves_on_without_a_download_and_back_returns_to_it() {
     settle(&mut rt);
     let s = rt.state.first_run.as_ref().unwrap();
     assert!(s.had_model, "a model here needs no download pill");
-    assert!(!texts(&rt).contains(&"Setting up Hex".to_owned()));
+    assert!(!texts(&rt).contains(&"Setting up Volna".to_owned()));
     // Back returns to the list to change the pick.
     tap(&mut rt, "back");
     assert!(rt.find("model-list").is_some());
@@ -2093,7 +2093,7 @@ fn with_no_model_found_onboarding_downloads_the_recommended_model_with_no_list()
         let shown = texts(&rt);
         assert!(rt.find("model-list").is_none(), "{scene}: no model list");
         assert!(
-            shown.contains(&"Setting up Hex".to_owned()),
+            shown.contains(&"Setting up Volna".to_owned()),
             "{scene}: {shown:?}"
         );
         assert!(
@@ -2144,7 +2144,7 @@ fn the_microphone_field_names_the_input_in_use() {
 
 #[test]
 fn a_closed_lid_names_the_input_standing_in_for_the_built_in_microphone() {
-    let note = "MacBook Pro Microphone is off while the lid is closed, so Hex listens to Studio Display Microphone";
+    let note = "MacBook Pro Microphone is off while the lid is closed, so Volna listens to Studio Display Microphone";
     let field = |rt: &Runtime<Ui>| element(rt, "microphone-control").label;
     let mut rt = runtime("mac-microphone-lid-closed", true, PANE_SIZE);
     assert_eq!(
@@ -2171,7 +2171,7 @@ fn a_closed_lid_names_the_input_standing_in_for_the_built_in_microphone() {
 
 #[test]
 fn a_passed_over_bluetooth_default_names_the_input_in_use() {
-    let note = "Kit Pods is Bluetooth, so Hex listens to MacBook Pro Microphone";
+    let note = "Kit Pods is Bluetooth, so Volna listens to MacBook Pro Microphone";
     let mut rt = runtime("mac-microphone-bluetooth", true, TALL_SIZE);
     assert_eq!(
         element(&rt, "microphone-control").label.as_deref(),

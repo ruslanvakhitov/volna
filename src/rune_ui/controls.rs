@@ -78,7 +78,7 @@ pub(super) struct Paint {
 impl Paint {
     pub(super) fn new(dark: bool, scale: f32) -> Self {
         Self {
-            k: rune_theme_opencode::kit(dark),
+            k: crate::volna_theme::kit(dark),
             hair: 1.0 / scale,
         }
     }
@@ -679,7 +679,7 @@ pub(super) enum ButtonKind {
     Danger,
 }
 
-/// Builds push buttons at Hex's sizes, which keep tighter padding and
+/// Builds push buttons at Volna's sizes, which keep tighter padding and
 /// corners than the kit's `ControlSize`s of the same height.
 pub(super) trait PushSize {
     /// 28 pt, the kit's Large height.

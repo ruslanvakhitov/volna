@@ -2,7 +2,7 @@
 //! recording offer, "left the call", the ready transcript, and the recording
 //! capsule. Each is an
 //! interactive Rune overlay, which on macOS is a non-activating `NSPanel`:
-//! its buttons take clicks while the call app keeps focus and Hex never
+//! its buttons take clicks while the call app keeps focus and Volna never
 //! activates. An offer that times out only closes; nothing starts or stops
 //! on a timeout.
 //!
@@ -428,12 +428,12 @@ impl MeetingCapsules {
         };
         let panel = overlay(
             app,
-            "Hex meeting",
+            "Volna meeting",
             (MEETING_PANEL_WIDTH, MEETING_PANEL_HEIGHT),
         );
         let recording = overlay(
             app,
-            "Hex meeting recording",
+            "Volna meeting recording",
             (RECORDING_PANEL_WIDTH, RECORDING_PANEL_HEIGHT),
         );
         Self {
@@ -760,9 +760,9 @@ fn view_body(capsule: &Capsule, cx: &mut Cx<Capsule>) -> El {
             p.danger(),
             tr_fill("{} left the call", app),
             if *auto_stop {
-                tr("Hex stops recording in 30 s unless you keep recording.")
+                tr("Volna stops recording in 30 s unless you keep recording.")
             } else {
-                tr("Hex is still recording.")
+                tr("Volna is still recording.")
             }
             .to_owned(),
             vec![
@@ -856,7 +856,7 @@ fn reminder(
         return (
             p.accent(),
             meeting.display_title(),
-            tr_fill("{} · Hex records automatically", &when),
+            tr_fill("{} · Volna records automatically", &when),
             actions,
         );
     }
@@ -1358,7 +1358,7 @@ mod tests {
     #[test]
     fn an_always_record_reminder_says_so_and_never_offers_record() {
         let (mut rt, commands, _) = runtime(reminder(true, true), false, true, REMINDER);
-        assert!(texts(&rt).contains(&"Starts in 1 min · Hex records automatically".to_string()));
+        assert!(texts(&rt).contains(&"Starts in 1 min · Volna records automatically".to_string()));
         assert!(rt.find("record").is_none());
         assert!(rt.find("join-record").is_none());
         tap(&mut rt, "join");
@@ -1653,7 +1653,7 @@ mod tests {
                 "system": {"file": "system.wav", "samples": 0, "dropped_packets": 0},
                 "microphone": {"file": "microphone.wav", "samples": 0, "dropped_packets": 0},
                 "error": null,
-                "export_path": "/Users/kit/Documents/Hex Meetings/Design sync.md"
+                "export_path": "/Users/kit/Documents/Volna Meetings/Design sync.md"
             }))
             .unwrap(),
         ))
@@ -1692,7 +1692,7 @@ mod tests {
         let (mut rt, commands, _) = runtime(auto, false, true, CALL_ENDED);
         assert!(
             texts(&rt)
-                .contains(&"Hex stops recording in 30 s unless you keep recording.".to_string())
+                .contains(&"Volna stops recording in 30 s unless you keep recording.".to_string())
         );
         tap(&mut rt, "keep-recording");
         assert!(matches!(
@@ -1703,7 +1703,7 @@ mod tests {
 
         // Without the lab, Keep recording only closes the capsule.
         let (mut rt, commands, _) = runtime(call_ended(), false, true, CALL_ENDED);
-        assert!(texts(&rt).contains(&"Hex is still recording.".to_string()));
+        assert!(texts(&rt).contains(&"Volna is still recording.".to_string()));
         tap(&mut rt, "keep-recording");
         assert!(commands.try_recv().is_err());
     }

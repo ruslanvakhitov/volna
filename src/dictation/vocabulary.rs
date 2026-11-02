@@ -1,4 +1,4 @@
-//! The shared vocabulary: names Hex should know (people, projects,
+//! The shared vocabulary: names Volna should know (people, projects,
 //! products), each with spellings a transcript may show instead ("sounds
 //! like"). Search uses it to find a term's likely mis-transcriptions,
 //! prompts can read it through [`terms`], Parakeet biases its transcripts

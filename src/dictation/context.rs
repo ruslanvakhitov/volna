@@ -26,6 +26,8 @@ pub struct ContextSnapshot {
     pub browser_url: Option<Url>,
     pub window_title: Option<String>,
     pub input_revision: Option<u64>,
+    /// A fixed per-dictation screen-context ticket, never serialized.
+    pub screen: Option<crate::screen_context::Session>,
 }
 
 pub struct ContextMonitor {
@@ -144,6 +146,7 @@ impl ContextSnapshot {
                         browser_url: Some(browser_url),
                         window_title,
                         input_revision: None,
+                        screen: None,
                     });
                 }
                 Ok(None) => {}
@@ -184,6 +187,7 @@ impl ContextSnapshot {
                     browser_url: url,
                     window_title: title,
                     input_revision: None,
+                    screen: None,
                 });
             }
         }
@@ -243,6 +247,7 @@ fn capture_macos(read_page: bool) -> Result<ContextSnapshot> {
         browser_url,
         window_title: crate::accessibility::focused_window_title(pid),
         input_revision: None,
+        screen: None,
     })
 }
 

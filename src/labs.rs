@@ -28,7 +28,7 @@ use color_eyre::eyre::eyre;
 use crate::app_settings::{AppSettings, LabsSettings};
 
 /// Where people send feedback on Labs features.
-pub const FEEDBACK_URL: &str = "https://github.com/anomalyco/hex/issues/new";
+pub const FEEDBACK_URL: &str = "https://github.com/ruslanvakhitov/volna/issues/new";
 
 /// Who a Labs feature is for.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -355,7 +355,7 @@ impl Feature {
         match self {
             Self::Meetings => "Record calls and keep transcripts (its own pane)",
             Self::VoiceFilter => {
-                "Hex Microphone virtual input and real-time voice filters (its own pane)"
+                "Volna Microphone virtual input and real-time voice filters (its own pane)"
             }
             Self::Playground => "Scene and story browser in the window",
             Self::LiveText => "Show provisional words beside the HUD while dictating",
@@ -390,7 +390,7 @@ impl Feature {
                 "Export meeting transcripts as SRT or VTT subtitles with hex meetings show"
             }
             Self::SecondDictationShortcut => {
-                "Another shortcut that dictates like the main one (second_dictation_hotkey), such as a key on an external keyboard"
+                "Contextual dictation: local screen OCR and vocabulary per application"
             }
             Self::SmartSpacing => "Add a space before a dictation pasted right after a word",
             Self::SpokenSymbols => {
@@ -427,7 +427,7 @@ impl Feature {
                 "Shorten long pauses before a whole dictation goes to the model, so slow computers paste sooner"
             }
             Self::StopWhenCallEnds => {
-                "Stop a meeting recording Hex started on its own 30 s after the call app leaves the microphone and goes quiet"
+                "Stop a meeting recording Volna started on its own 30 s after the call app leaves the microphone and goes quiet"
             }
             Self::OutputFixes => {
                 "Offer Vocabulary and Fix this beside Output's Try result, to correct a wrong result"
@@ -440,7 +440,7 @@ impl Feature {
                 "Show only downloaded speech models in the picker, with the space they take"
             }
             Self::SectionKeyAlone => {
-                "Use the § key, left of 1 on ISO keyboards, alone as a shortcut; Hex takes § from every app while it's bound"
+                "Use the § key, left of 1 on ISO keyboards, alone as a shortcut; Volna takes § from every app while it's bound"
             }
             Self::KeepRecordings => {
                 "Keep the audio of dictations saved to History, so you can transcribe them again with another model"
@@ -751,7 +751,7 @@ pub fn skip_pauses() -> bool {
     on(SKIP_PAUSES) && Feature::SkipPauses.on_this_os()
 }
 
-/// A meeting recording Hex started on its own stops once its call app has
+/// A meeting recording Volna started on its own stops once its call app has
 /// left the microphone and gone quiet for a grace period (macOS; read on
 /// each pass of the meeting controller).
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
@@ -870,7 +870,7 @@ pub fn active_names(settings: &AppSettings) -> Vec<String> {
         .collect()
 }
 
-/// Logs the switches to process.log; call once logging is up in a long-lived Hex.
+/// Logs the switches to process.log; call once logging is up in a long-lived Volna.
 pub fn log_launch() {
     tracing::info!(
         live_text = live_text(),
@@ -889,12 +889,12 @@ pub enum LabsCommand {
     On { feature: String },
     /// Turn a Labs feature off.
     Off { feature: String },
-    /// Print the link that opens Hex's Labs page at a feature's row (macOS).
+    /// Print the link that opens Volna's Labs page at a feature's row (macOS).
     #[cfg(target_os = "macos")]
     Link { feature: String },
 }
 
-/// `hex labs`: edits `settings.json`; a running Hex applies most changes
+/// `hex labs`: edits `settings.json`; a running Volna applies most changes
 /// when it next starts.
 pub fn run(command: Option<&LabsCommand>) -> Result<()> {
     #[cfg(target_os = "macos")]
@@ -908,7 +908,7 @@ pub fn run(command: Option<&LabsCommand>) -> Result<()> {
         );
         return Ok(());
     }
-    // Listing, or handing the change to a running Hex, never writes the file.
+    // Listing, or handing the change to a running Volna, never writes the file.
     let settings = AppSettings::read()?;
     let (name, on) = match command {
         None | Some(LabsCommand::List) => {
@@ -933,14 +933,14 @@ pub fn run(command: Option<&LabsCommand>) -> Result<()> {
         && crate::audio::hex_microphone::driver_bundle_installed()
     {
         return Err(eyre!(
-            "voice-filter stays on while the Hex Microphone driver is installed; uninstall the driver in its pane to turn it off"
+            "voice-filter stays on while the Volna Microphone driver is installed; uninstall the driver in its pane to turn it off"
         ));
     }
     if !on && let Some(why) = feature.off_refusal(&settings) {
         return Err(eyre!(why));
     }
     let state = if on { "on" } else { "off" };
-    // A running Hex saves and applies it at once, as its Labs row would.
+    // A running Volna saves and applies it at once, as its Labs row would.
     if let Some(reply) = crate::control::cli::set_in_running_hex(
         feature.settings_key(),
         if on { "true" } else { "false" },
@@ -979,7 +979,7 @@ fn resolve(name: &str, reaches: impl Fn(Feature) -> bool + Copy) -> Result<Featu
         .filter(|feature| feature.on_this_os() && reaches(*feature))
         .ok_or_else(|| {
             eyre!(
-                "unknown Labs feature {name:?}; this Hex has: {}",
+                "unknown Labs feature {name:?}; this Volna has: {}",
                 Feature::available_where(reaches)
                     .map(Feature::name)
                     .collect::<Vec<_>>()
@@ -1034,12 +1034,13 @@ mod tests {
     }
 
     #[test]
-    fn every_feature_is_off_by_default_and_round_trips() {
+    fn only_volna_context_is_on_by_default_and_every_feature_round_trips() {
         let mut settings = AppSettings::default();
         for feature in Feature::ALL {
-            assert!(
-                !feature.on(&settings),
-                "{} is on by default",
+            assert_eq!(
+                feature.on(&settings),
+                cfg!(target_os = "macos") && feature == Feature::SecondDictationShortcut,
+                "unexpected default for {}",
                 feature.name()
             );
             assert_eq!(Feature::from_name(feature.name()), Some(feature));

@@ -1,4 +1,4 @@
-//! The languages Hex names, in the order Settings offers them.
+//! The languages Volna names, in the order Settings offers them.
 
 use super::models::AUTO_LANGUAGE;
 

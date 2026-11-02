@@ -1,3 +1,7 @@
+# Volna fork scope
+
+This is Ruslan’s independent macOS fork. The user explicitly requested new branding and enabled screen-context dictation by default. Those requirements override the upstream product name and Labs defaults below. Keep the current pinned engine dependencies while delivering this fork. Do not publish, merge or deploy to Anomaly, change its services, or run upstream release workflows. Work on the fork branch and build a separate Volna.app with its own bundle identifier and data directory. Keep upstream LICENSE and third-party notices unchanged. Verify touched UI with local snapshots; upstream Linux goldens are not a release gate for this private macOS build.
+
 <!-- tallow -->
 # Hex Agent Guide
 

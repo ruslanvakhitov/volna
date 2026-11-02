@@ -1,4 +1,4 @@
-//! The Hex mark: a thin single-hexagon outline matching Round 3 of the icon
+//! The Volna mark: a thin single-hexagon outline matching Round 3 of the icon
 //! (`t573`, Hairline), built from one swappable [`HexGlyphSpec`].
 
 use rune::{El, LineCap, Shape, canvas};
@@ -61,38 +61,16 @@ impl HexGlyphSpec {
     }
 
     pub(crate) fn poly(self, size: f32, scale: f32) -> Vec<Point> {
-        let half = size * 0.5;
-        let map = |[x, y]: Point| [half + x * half * scale, half + y * half * scale];
-        let v = self.vertices;
-        if self.corner_radius <= 0.001 {
-            let mut pts: Vec<Point> = v.into_iter().map(map).collect();
-            pts.push(pts[0]);
-            return pts;
-        }
-        let r = self.corner_radius.min(0.35);
-        let mut pts = Vec::with_capacity(32);
-        for i in 0..6 {
-            let prev = v[(i + 5) % 6];
-            let curr = v[i];
-            let next = v[(i + 1) % 6];
-            let to_prev = [prev[0] - curr[0], prev[1] - curr[1]];
-            let to_next = [next[0] - curr[0], next[1] - curr[1]];
-            let lp = to_prev[0].hypot(to_prev[1]).max(1e-4);
-            let ln = to_next[0].hypot(to_next[1]).max(1e-4);
-            let a = [curr[0] + to_prev[0] / lp * r, curr[1] + to_prev[1] / lp * r];
-            let b = [curr[0] + to_next[0] / ln * r, curr[1] + to_next[1] / ln * r];
-            for step in 0..=4 {
-                let u = step as f32 / 4.0;
-                let inv = 1.0 - u;
-                let pt = [
-                    inv * inv * a[0] + 2.0 * inv * u * curr[0] + u * u * b[0],
-                    inv * inv * a[1] + 2.0 * inv * u * curr[1] + u * u * b[1],
-                ];
-                pts.push(map(pt));
-            }
-        }
-        pts.push(pts[0]);
-        pts
+        let _ = (self.vertices, self.corner_radius);
+        (0..=80)
+            .map(|i| {
+                let x = i as f32 / 80.0;
+                [
+                    size * (0.1 + 0.8 * x),
+                    size * (0.5 + 0.21 * (x * std::f32::consts::TAU * 2.0).sin()) * scale,
+                ]
+            })
+            .collect()
     }
 }
 
@@ -150,7 +128,7 @@ pub(crate) fn hex_meter(p: Paint, key: &str, size: f32, progress: f32, closed: f
         .label(format!("{}%", (progress.clamp(0.0, 1.0) * 100.0).round()))
 }
 
-/// Thin single-hexagon outline with a quiet breathing corona for `"Hex is ready"`.
+/// Thin single-hexagon outline with a quiet breathing corona for `"Volna is ready"`.
 pub(crate) fn hex_meter_glowing(p: Paint, key: &str, size: f32, now: f64, reduced: bool) -> El {
     let spec = ACTIVE_GLYPH;
     let w = spec.stroke_width(size);
@@ -179,21 +157,21 @@ pub(crate) fn hex_meter_glowing(p: Paint, key: &str, size: f32, now: f64, reduce
     let shape = Shape::new()
         .stroke_with(
             ring.clone(),
-            true,
+            false,
             w * 5.2,
             LineCap::Round,
             halo.alpha(outer_a),
         )
         .stroke_with(
             ring.clone(),
-            true,
+            false,
             w * 2.5,
             LineCap::Round,
             halo.alpha(inner_a),
         )
-        .stroke_with(ring, true, w, LineCap::Round, p.text());
+        .stroke_with(ring, false, w, LineCap::Round, p.text());
 
-    canvas(shape).key(key).size(total, total).label("Hex")
+    canvas(shape).key(key).size(total, total).label("Volna")
 }
 
 fn meter_shape(p: Paint, size: f32, progress: f32, closed: f32) -> Shape {
@@ -213,7 +191,7 @@ fn meter_shape(p: Paint, size: f32, progress: f32, closed: f32) -> Shape {
         shape = shape.stroke_with(ring.clone(), true, w, LineCap::Round, track);
     }
     if progress >= 1.0 && closed >= 1.0 {
-        shape = shape.stroke_with(ring, true, w, LineCap::Round, lit);
+        shape = shape.stroke_with(ring, false, w, LineCap::Round, lit);
     } else if progress > 0.002 {
         let (arc, tip) = sweep_poly(&poly, progress);
         let closed_loop = progress >= 1.0;

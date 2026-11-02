@@ -302,7 +302,7 @@ pub fn run(
     })?;
     emit_state(&mut events, VoiceState::Listening, &device_label)?;
     println!(
-        "Hex is ready on {}. Hold {} to dictate, release to paste; Ctrl-C stops.",
+        "Volna is ready on {}. Hold {} to dictate, release to paste; Ctrl-C stops.",
         device_label, hotkey_label
     );
 

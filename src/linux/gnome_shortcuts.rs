@@ -1,6 +1,6 @@
-//! Hex's own GNOME custom keyboard shortcuts, for GNOME without a
+//! Volna's own GNOME custom keyboard shortcuts, for GNOME without a
 //! GlobalShortcuts portal (GNOME 46 and older, #781): entries in GNOME
-//! Settings › Keyboard › Custom Shortcuts that run `hex` commands. Hex owns
+//! Settings › Keyboard › Custom Shortcuts that run `hex` commands. Volna owns
 //! only the entries under its own paths (`…/custom-keybindings/hex-*/`) and
 //! leaves every other custom shortcut alone. GNOME runs a custom shortcut on
 //! the key press only, so dictation toggles there.
@@ -14,7 +14,7 @@ use crate::linux::gsettings::{gsettings, string_list, string_list_text, string_t
 const LIST_SCHEMA: &str = "org.gnome.settings-daemon.plugins.media-keys";
 const ENTRY_SCHEMA: &str = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding";
 const BASE: &str = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/";
-/// Every entry Hex may write, by path name.
+/// Every entry Volna may write, by path name.
 const ENTRIES: [&str; 3] = ["hex-dictation", "hex-paste-last", "hex-annotate"];
 
 /// One custom shortcut: its path name, its name in GNOME Settings, the `hex`
@@ -27,7 +27,7 @@ struct Entry {
     accelerator: String,
 }
 
-/// Whether Hex's entries should exist, or `None` while a starting listener
+/// Whether Volna's entries should exist, or `None` while a starting listener
 /// hasn't said how it gets its shortcuts. They stand in for a missing
 /// shortcuts portal only: once the portal (or X11) binds the shortcuts, an
 /// entry on the same key would also run `hex dictation toggle` on every press
@@ -41,8 +41,8 @@ pub(crate) fn wanted(requested: bool, shortcuts: Option<DesktopShortcuts>) -> Op
     }
 }
 
-/// Writes Hex's entries for `settings`' shortcuts, starting `hex`, and
-/// removes Hex's entries it no longer has a shortcut for. An entry already
+/// Writes Volna's entries for `settings`' shortcuts, starting `hex`, and
+/// removes Volna's entries it no longer has a shortcut for. An entry already
 /// listed keeps its key, which the person may have changed in GNOME Settings.
 pub(crate) fn install(settings: &AppSettings, hex: &std::path::Path) -> Result<()> {
     let entries = entries(settings);
@@ -61,13 +61,13 @@ pub(crate) fn install(settings: &AppSettings, hex: &std::path::Path) -> Result<(
     write_list(&kept)
 }
 
-/// Removes every entry Hex wrote.
+/// Removes every entry Volna wrote.
 pub(crate) fn remove() -> Result<()> {
     write_list(&[])
 }
 
-/// Lists Hex's entries `kept` (and every entry that isn't Hex's) in GNOME's
-/// custom shortcuts, and resets Hex's others.
+/// Lists Volna's entries `kept` (and every entry that isn't Volna's) in GNOME's
+/// custom shortcuts, and resets Volna's others.
 fn write_list(kept: &[&str]) -> Result<()> {
     let listed = string_list(&gsettings(&["get", LIST_SCHEMA, "custom-keybindings"])?);
     let ours = |path: &str| {
@@ -97,7 +97,7 @@ fn write_list(kept: &[&str]) -> Result<()> {
     Ok(())
 }
 
-/// Hex's entries for the shortcuts `settings` records. A shortcut GNOME
+/// Volna's entries for the shortcuts `settings` records. A shortcut GNOME
 /// can't bind (modifiers alone, a mouse button) gets none.
 fn entries(settings: &AppSettings) -> Vec<Entry> {
     let mut entries = Vec::new();
@@ -113,13 +113,13 @@ fn entries(settings: &AppSettings) -> Vec<Entry> {
     };
     add(
         "hex-dictation",
-        "Hex: dictation",
+        "Volna: dictation",
         "dictation toggle",
         Some(&settings.dictation_hotkey),
     );
     add(
         "hex-paste-last",
-        "Hex: paste last dictation",
+        "Volna: paste last dictation",
         "paste-last",
         settings.paste_last_hotkey.as_ref(),
     );
@@ -127,7 +127,7 @@ fn entries(settings: &AppSettings) -> Vec<Entry> {
     if settings.capture.enabled {
         add(
             "hex-annotate",
-            "Hex: annotate",
+            "Volna: annotate",
             "annotate toggle",
             Some(&settings.capture.hotkey),
         );

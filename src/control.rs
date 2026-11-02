@@ -1,5 +1,5 @@
 //! `hex` control: the typed command/reply protocol an agent uses to drive the
-//! one running Hex, the settings registry behind `hex settings`, and the CLI
+//! one running Volna, the settings registry behind `hex settings`, and the CLI
 //! client. Transports (the macOS local API's `POST /control`) only move
 //! [`ControlRequest`]s and [`ControlResponse`]s; the app's host carries out
 //! each command, and every rule shared between the window and the CLI lives
@@ -343,7 +343,7 @@ pub struct ScrawlCaptureSummary {
     pub words: usize,
     /// The session it was sent to, if it was.
     pub sent_to: Option<ScrawlCaptureSession>,
-    /// OpenCode didn't take its send yet; Hex retries it.
+    /// OpenCode didn't take its send yet; Volna retries it.
     #[serde(default)]
     pub queued: bool,
 }
@@ -508,8 +508,8 @@ pub fn version_mismatch(version: u64) -> ControlError {
     ControlError::new(
         "version-mismatch",
         format!(
-            "this hex speaks control version {version}, but the running Hex speaks \
-             {CONTROL_VERSION}; use the hex inside the running app or restart Hex"
+            "this hex speaks control version {version}, but the running Volna speaks \
+             {CONTROL_VERSION}; use the hex inside the running app or restart Volna"
         ),
     )
 }
@@ -532,7 +532,7 @@ pub struct StatusReport {
     /// The Labs features turned on (`crate::labs`), by `hex labs` name.
     #[serde(default)]
     pub labs: Vec<String>,
-    /// What this OS's Hex can do, by capability name (`rune_ui::platform`).
+    /// What this OS's Volna can do, by capability name (`rune_ui::platform`).
     /// A command for one it can't do answers `unsupported`.
     #[serde(default)]
     pub capabilities: std::collections::BTreeMap<String, bool>,
@@ -685,8 +685,8 @@ pub struct ModelInfo {
     /// Deprecated: whether the model reads the vocabulary as its prompt,
     /// which is what recognition hints became. Use `vocabulary`.
     pub supports_recognition_hints: bool,
-    /// Where the file is or comes from: `download` (Hex downloads it),
-    /// `hex` (Hex's own download), `imported` (Hex's copy of a file you
+    /// Where the file is or comes from: `download` (Volna downloads it),
+    /// `hex` (Volna's own download), `imported` (Volna's copy of a file you
     /// added), or `found: owner/name@abcdef1` (another app's download in the
     /// Hugging Face cache, used where it is).
     #[serde(default)]
@@ -707,7 +707,7 @@ pub fn model_source(
         .filter(|_| installed)
         .and_then(|path| describe(&path));
     match (model.id.is_custom(), here) {
-        (true, Some(origin)) => format!("found: {origin} (not tested by Hex)"),
+        (true, Some(origin)) => format!("found: {origin} (not tested by Volna)"),
         (false, Some(origin)) => format!("found: {origin}"),
         (true, None) => "imported".into(),
         (false, None) if installed => "hex".into(),
@@ -773,7 +773,7 @@ pub fn model_infos(
                 model.architecture.as_str(),
                 "whisper" | "qwen3_asr"
             ),
-            source: format!("found: {} (not tested by Hex)", model.source()),
+            source: format!("found: {} (not tested by Volna)", model.source()),
         });
     }
     infos
@@ -855,7 +855,7 @@ pub fn model_selection(
     let definition = crate::transcription::models::definition(id);
     crate::transcription::models::validate(&selection).map_err(|error| {
         let supported = if definition.languages.contains(&"*") {
-            "any language code Hex knows (en, de, fr, ja, …)".to_owned()
+            "any language code Volna knows (en, de, fr, ja, …)".to_owned()
         } else {
             definition.languages.join(", ")
         };
@@ -867,7 +867,7 @@ pub fn model_selection(
     Ok(selection)
 }
 
-/// Refuses to stop Hex while it records, unless forced. `capture` is the
+/// Refuses to stop Volna while it records, unless forced. `capture` is the
 /// listener's answer (idle when no listener runs or setup gates it); a
 /// listener that couldn't answer might be recording, so it refuses too.
 pub fn check_quit(
@@ -1240,7 +1240,7 @@ mod tests {
                     id: "1.scrawl".into(),
                     sent_to: Some(ScrawlCaptureSession {
                         session: "ses_1".into(),
-                        title: "Hex".into(),
+                        title: "Volna".into(),
                     }),
                     ..ScrawlCaptureSummary::default()
                 }],
@@ -1261,7 +1261,7 @@ mod tests {
             ControlReply::Transcript {
                 text: "Ship it.".into(),
             },
-            ControlReply::error("busy", "Hex is busy"),
+            ControlReply::error("busy", "Volna is busy"),
         ] {
             let response = ControlResponse::from(reply);
             let json = serde_json::to_string(&response).unwrap();
@@ -1353,7 +1353,7 @@ mod tests {
         assert_eq!(remembered.language, "de");
         let french = pick("whisper_large_v3_turbo", Some("fr")).unwrap();
         assert_eq!(french.language, "fr");
-        // Whisper's wildcard takes any language Hex knows, not any string.
+        // Whisper's wildcard takes any language Volna knows, not any string.
         for (model, language) in [
             ("whisper_large_v3_turbo", "klingon"),
             ("sense_voice_small", "de"),

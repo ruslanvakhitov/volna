@@ -457,8 +457,8 @@ unsafe extern "C" fn physical_event_callback(
     event
 }
 
-/// Whether a HID key press can reveal a chord Hex would otherwise miss.
-/// Escape ends no dictation, and Hex's own shortcuts act through their session events.
+/// Whether a HID key press can reveal a chord Volna would otherwise miss.
+/// Escape ends no dictation, and Volna's own shortcuts act through their session events.
 fn is_chord_evidence(code: u16, flags: u64, hotkeys: RuntimeHotkeys) -> bool {
     code != ESCAPE_KEY_CODE
         && !is_own_globe_key(code, hotkeys.dictation)
@@ -664,7 +664,7 @@ unsafe extern "C" fn event_callback(
         context.takes_escape.load(Ordering::Acquire),
     );
     context.activity.observe(input, suppress);
-    // A key Hex consumed (its shortcuts, Escape) was never the app's chord.
+    // A key Volna consumed (its shortcuts, Escape) was never the app's chord.
     #[cfg(hex_capture)]
     if let Some(key) = capture_key
         && !suppress
@@ -939,8 +939,8 @@ impl ShortcutSuppression {
         self.key_presses.clear();
     }
 
-    /// Whether the tap keeps `input` from the app in front: Hex's shortcuts,
-    /// Escape while Hex takes it, and `hotkeys.cancel`, which the caller
+    /// Whether the tap keeps `input` from the app in front: Volna's shortcuts,
+    /// Escape while Volna takes it, and `hotkeys.cancel`, which the caller
     /// leaves set only while a toggled recording runs.
     fn process_all(
         &mut self,
@@ -1044,7 +1044,7 @@ pub enum HotkeyAction {
     Start,
     Finish,
     Discard(DiscardCause),
-    /// Hex ended the recording: its input was lost or suspended.
+    /// Volna ended the recording: its input was lost or suspended.
     Cancel,
     /// Toggle's cancel shortcut discarded the recording.
     CancelShortcut,
@@ -1173,7 +1173,7 @@ pub struct DictationHotkey {
     function_modifier: (CaptureInstant, Option<bool>),
     // Recent HID key presses, which another app's shortcut may have hidden.
     physical_key_downs: VecDeque<(CaptureInstant, u16, HidTiming)>,
-    // When the held modifier-only press Hex owns is due its chord breaker.
+    // When the held modifier-only press Volna owns is due its chord breaker.
     chord_break_at: Option<CaptureInstant>,
     modifier_history: ModifierHistory,
     // When each tracked key last went down.
@@ -1529,7 +1529,7 @@ impl DictationHotkey {
     }
 
     /// A bare modifier passes through to other apps, so a hold reads to them
-    /// as a tap on release (Raycast's Option-tap hotkey, for one). Once Hex
+    /// as a tap on release (Raycast's Option-tap hotkey, for one). Once Volna
     /// owns the press (a hold past the threshold, a Toggle start past the
     /// chord grace, or the press that finishes a lock) it is owed one chord
     /// breaker while still held.
@@ -1583,7 +1583,7 @@ impl DictationHotkey {
 
     /// Posts the chord breaker the held press is due, if exactly its modifiers
     /// are still physically down; any other modifier already breaks the tap.
-    /// The posted key carries Hex's marker, so neither shortcut machine sees
+    /// The posted key carries Volna's marker, so neither shortcut machine sees
     /// it, and the key tap drops it before the focused app.
     pub fn break_chord(&mut self, now: CaptureInstant) {
         if !self.take_chord_break(now) {
@@ -2191,7 +2191,7 @@ mod tests {
             callback_input_with(
                 true,
                 &[
-                    // Hex takes Escape (the capsule's picker): it consumes it.
+                    // Volna takes Escape (the capsule's picker): it consumes it.
                     (
                         now,
                         InputEvent::Key {
@@ -4873,7 +4873,7 @@ mod tests {
         locked.process(InputEvent::Flags(NO_FLAGS), at(300));
         assert!(locked.is_locked());
         assert!(!locked.take_chord_break(at(2_000)));
-        // The press that finishes the lock is Hex's.
+        // The press that finishes the lock is Volna's.
         assert_eq!(
             locked.process(InputEvent::Flags(OPTION_KEY_MASK), at(3_000)),
             Some(HotkeyAction::Finish)
@@ -4887,7 +4887,7 @@ mod tests {
         programmatic.process(InputEvent::Flags(NO_FLAGS), at(1_060));
         assert!(!programmatic.take_chord_break(at(1_060)));
 
-        // Toggle: the starting press is Hex's once past the chord grace.
+        // Toggle: the starting press is Volna's once past the chord grace.
         let grace = crate::feedback::CHORD_GRACE;
         let mut toggle = test_hotkey(false, now);
         toggle.set_toggle(true);
@@ -4913,7 +4913,7 @@ mod tests {
 
     /// The chord breaker is posted through both taps; its mark keeps it from
     /// becoming the user's chord or HID chord evidence, and the key tap drops
-    /// it so the focused app never beeps at it. Hex's other synthetic keys,
+    /// it so the focused app never beeps at it. Volna's other synthetic keys,
     /// such as the paste shortcut, still reach the app.
     #[test]
     fn marked_chord_breaker_never_reaches_the_shortcut_machines_or_the_app() {
@@ -5605,7 +5605,7 @@ mod tests {
         assert!(!suppression.process_all(down, hotkeys, false, true));
         assert!(!suppression.process_all(up, hotkeys, false, true));
 
-        // Hex can stop taking Escape before the key lifts;
+        // Volna can stop taking Escape before the key lifts;
         // the repeat and release keep the press's suppression decision.
         assert!(suppression.process_all(down, hotkeys, true, true));
         assert!(suppression.process_all(down, hotkeys, true, false));

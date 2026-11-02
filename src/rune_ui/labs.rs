@@ -117,7 +117,10 @@ pub(super) fn reveal(ui: &mut Ui, name: Option<&str>, tx: &mut Tx) {
             tx.scroll_center(row_key(feature));
             tx.wake_after(FLASH);
         }
-        None => tracing::warn!(feature = name, "a Labs link named no feature this Hex has"),
+        None => tracing::warn!(
+            feature = name,
+            "a Labs link named no feature this Volna has"
+        ),
     }
 }
 
@@ -145,7 +148,7 @@ struct Row {
     title: &'static str,
     about: &'static str,
     on: bool,
-    /// Can't be switched: on while an installed Hex Microphone driver or
+    /// Can't be switched: on while an installed Volna Microphone driver or
     /// the dictation model needs it, off under an organization's lock.
     locked: bool,
 }
@@ -193,9 +196,9 @@ fn rows(ui: &Ui) -> Vec<Row> {
             on: super::fun::running(ui),
             locked,
             about: if locked {
-                tr("On while the Hex Microphone driver is installed. Uninstall the driver in Voice Filter to turn it off.")
+                tr("On while the Volna Microphone driver is installed. Uninstall the driver in Voice Filter to turn it off.")
             } else {
-                tr("Hex Microphone virtual input and real-time voice filters")
+                tr("Volna Microphone virtual input and real-time voice filters")
             },
             ..row(Feature::VoiceFilter, &VOICE_FILTER_ICON, tr("Voice Filter"), "")
         });
@@ -232,7 +235,7 @@ fn rows(ui: &Ui) -> Vec<Row> {
                 Feature::StopWhenCallEnds,
                 &TIMER,
                 tr("Stop when the call ends"),
-                tr("Stop a recording Hex started on its own 30 s after the call app leaves the microphone and goes quiet"),
+                tr("Stop a recording Volna started on its own 30 s after the call app leaves the microphone and goes quiet"),
             ));
         }
     }
@@ -261,7 +264,7 @@ fn rows(ui: &Ui) -> Vec<Row> {
             Feature::PauseBrowser,
             &GLOBE,
             tr("Also pause the browser"),
-            tr("While dictating with Pause media: YouTube and other tabs, resumed only if Hex paused them"),
+            tr("While dictating with Pause media: YouTube and other tabs, resumed only if Volna paused them"),
         ));
         rows.push(row(
             Feature::KeepOnClipboard,
@@ -280,8 +283,8 @@ fn rows(ui: &Ui) -> Vec<Row> {
             rows.push(row(
                 Feature::SecondDictationShortcut,
                 &KEYBOARD,
-                tr("Second dictation shortcut"),
-                tr("Another shortcut that dictates like the main one, such as a key on an external keyboard"),
+                tr("Contextual dictation"),
+                tr("Read the screen while speaking; learn this app’s terms"),
             ));
             // Reads the text before the cursor through macOS Accessibility.
             rows.push(row(
@@ -325,7 +328,7 @@ fn rows(ui: &Ui) -> Vec<Row> {
             Feature::SectionKeyAlone,
             &KEYBOARD,
             tr("Section key alone"),
-            tr("Use the § key, left of 1 on ISO keyboards, as a shortcut without a modifier. Hex takes § from every app while it's bound"),
+            tr("Use the § key, left of 1 on ISO keyboards, as a shortcut without a modifier. Volna takes § from every app while it's bound"),
         ));
     }
     // Linux's and Windows' engines transcribe a whole clip on the CPU.
@@ -508,7 +511,7 @@ fn flip(ui: &mut Ui, feature: Feature) {
     ui.update(|settings| feature.set(settings, on));
     match feature {
         Feature::KeyboardModelSwitching => ui.open = None,
-        // Hex hears the browser through System Audio Recording.
+        // Volna hears the browser through System Audio Recording.
         Feature::PauseBrowser if on && !ui.platform.system_audio => {
             ui.ask(super::platform::PlatformRequest::SystemAudio);
         }

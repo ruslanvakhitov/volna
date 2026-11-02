@@ -58,6 +58,7 @@ pub(crate) fn capture() -> ContextSnapshot {
         browser_url: accessible.and_then(|accessible| accessible.url),
         window_title: window.title,
         input_revision: None,
+        screen: None,
     }
 }
 

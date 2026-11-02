@@ -436,7 +436,7 @@ pub(crate) fn run(
     })?;
     emit_state(&mut events, VoiceState::Listening, &device_label)?;
     println!(
-        "Hex dictation is ready on {device_label}. Hold {hotkey_label} to dictate; Ctrl-C stops."
+        "Volna dictation is ready on {device_label}. Hold {hotkey_label} to dictate; Ctrl-C stops."
     );
 
     while !shutdown.load(Ordering::Relaxed) {

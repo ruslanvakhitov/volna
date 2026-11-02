@@ -135,7 +135,7 @@ impl LocalApi {
         )
     }
 
-    /// Start the running Linux or Windows app's local API. Hex runs on
+    /// Start the running Linux or Windows app's local API. Volna runs on
     /// without it, so a failure is only logged.
     #[cfg_attr(target_os = "macos", allow(dead_code))]
     pub fn start_for_app(
@@ -284,7 +284,7 @@ impl LocalApi {
         let Some(worker) = self.worker.take() else {
             return;
         };
-        // Retract discovery before draining so a replacement Hex can publish
+        // Retract discovery before draining so a replacement Volna can publish
         // while this listener is still bound and finishing in-flight requests.
         if let Some(discovery) = &self.discovery {
             discovery.remove_if_owned();
@@ -1756,7 +1756,7 @@ mod tests {
             raw_request_signalling(
                 port,
                 &format!(
-                    "GET /dictations/7/levels HTTP/1.1\r\nAuthorization: Bearer {level_token}\r\nX-Hex-Dictation-Token: {level_owner}\r\nConnection: close\r\n\r\n"
+                    "GET /dictations/7/levels HTTP/1.1\r\nAuthorization: Bearer {level_token}\r\nX-Volna-Dictation-Token: {level_owner}\r\nConnection: close\r\n\r\n"
                 ),
                 b"rmsDb",
                 subscribed,
@@ -2291,7 +2291,7 @@ mod tests {
         raw_request(
             port,
             &format!(
-                "{method} {path} HTTP/1.1\r\nAuthorization: Bearer {token}\r\nX-Hex-Dictation-Token: {owner_token}\r\nConnection: close\r\n\r\n"
+                "{method} {path} HTTP/1.1\r\nAuthorization: Bearer {token}\r\nX-Volna-Dictation-Token: {owner_token}\r\nConnection: close\r\n\r\n"
             ),
         )
     }
@@ -2300,7 +2300,7 @@ mod tests {
         raw_request_bytes(
             port,
             &format!(
-                "GET {path} HTTP/1.1\r\nAuthorization: Bearer {token}\r\nX-Hex-Dictation-Token: {owner_token}\r\nConnection: close\r\n\r\n"
+                "GET {path} HTTP/1.1\r\nAuthorization: Bearer {token}\r\nX-Volna-Dictation-Token: {owner_token}\r\nConnection: close\r\n\r\n"
             ),
         )
     }

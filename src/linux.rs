@@ -38,9 +38,9 @@ use crate::linux::service::{Activation, Launch};
     about = "Local, observable voice recognition (Linux beta)",
     long_about = "Local, observable voice recognition (Linux beta).\n\n\
         Control commands (status, dictation, settings, model, window, …) drive the one running \
-        Hex over its owner-only socket and never launch it, except `start` and `restart`. Every \
+        Volna over its owner-only socket and never launch it, except `start` and `restart`. Every \
         one takes --json for a versioned reply (docs/cli.md). Exit codes: 0 done or nothing to \
-        change, 1 refused or failed, 2 usage, 3 Hex isn't running.",
+        change, 1 refused or failed, 2 usage, 3 Volna isn't running.",
     after_help = "Run `hex <command> --help` for details, or `hex settings list` for every setting."
 )]
 struct Cli {
@@ -52,23 +52,23 @@ struct Cli {
 enum Command {
     #[command(flatten)]
     Control(ControlCli),
-    /// Open the Hex window, starting Hex when it is not running (the default).
+    /// Open the Volna window, starting Volna when it is not running (the default).
     App {
-        /// Start Hex in the background without opening the window.
+        /// Start Volna in the background without opening the window.
         #[arg(long)]
         hidden: bool,
         /// Arguments for a headless render, such as `--snap out.png --scene dark`.
         #[arg(last = true)]
         rune_args: Vec<String>,
     },
-    /// Run Hex in the foreground without opening the window (systemd's entry point).
+    /// Run Volna in the foreground without opening the window (systemd's entry point).
     Service {
         /// Run only the local API as a direct child whose stdin is owned by
         /// the host application (the TypeScript SDK).
         #[arg(long, hide = true)]
         embedded: bool,
     },
-    /// Quit Hex after its accepted work finishes (same as `hex quit`).
+    /// Quit Volna after its accepted work finishes (same as `hex quit`).
     #[command(hide = true)]
     Stop,
     /// Run X11 or Wayland hotkey dictation and automatic paste until interrupted.
@@ -89,8 +89,8 @@ pub(crate) fn run(shutdown: &'static AtomicBool) -> Result<()> {
         hidden: false,
         rune_args: Vec::new(),
     });
-    // Control and read commands talk to the running Hex or read files: no
-    // log, lock, or Hex of their own.
+    // Control and read commands talk to the running Volna or read files: no
+    // log, lock, or Volna of their own.
     let command = match command {
         Command::Control(command) => crate::control::cli::finish(crate::control::cli::run(command)),
         Command::Stop => crate::control::cli::finish(crate::control::cli::send(
@@ -162,7 +162,7 @@ pub(crate) fn run(shutdown: &'static AtomicBool) -> Result<()> {
     }
 }
 
-/// Forwards to the running Hex, starts its systemd unit, or becomes Hex.
+/// Forwards to the running Volna, starts its systemd unit, or becomes Volna.
 fn launch(
     activation: &Activation,
     show: bool,

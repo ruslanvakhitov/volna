@@ -3,7 +3,7 @@
 //! Ported from the t422 prototype (look A), itself a port of the OpenCode iOS
 //! dot scope (`DotScopeSimulation.swift`).
 //!
-//! [`Tuning`] is what HUD Lab edits; it is saved as `dot-scope.json` in Hex's
+//! [`Tuning`] is what HUD Lab edits; it is saved as `dot-scope.json` in Volna's
 //! Application Support folder. [`Scope`] steps the simulation at a fixed
 //! 240 Hz, so any frame rate draws the same picture, and yields one
 //! brightness pair per dot for `rune_hud.wgsl` to draw.
@@ -21,7 +21,7 @@ pub const MAX_COLUMNS: usize = 96;
 pub const MAX_ROWS: usize = 15;
 pub const MAX_DOTS: usize = 1024;
 /// The plate height the HUD window is laid out around.
-pub const PLATE_HEIGHT: f32 = 26.0;
+pub const PLATE_HEIGHT: f32 = 34.0;
 
 /// Dot scope's live parameters. Every default is the prototype's value.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -143,8 +143,8 @@ impl Default for Tuning {
             columns: 43.0,
             rows: 9.0,
             spacing: 2.6,
-            width: 112.0,
-            processing_width: 76.0,
+            width: 164.0,
+            processing_width: 108.0,
             height: PLATE_HEIGHT,
             braid_speed: 1.0,
             helix_cycles: 1.6,
@@ -152,7 +152,7 @@ impl Default for Tuning {
             response: 6.5,
             release: 0.15,
             history_speed: 150.0,
-            phosphor: 0.6,
+            phosphor: 0.30,
             glow: 1.0,
             saturation: 1.0,
             shimmer_pass: 0.55,

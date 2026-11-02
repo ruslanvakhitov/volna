@@ -1,12 +1,12 @@
 //! How the macOS app process ends.
 //!
 //! `exit` (what `-[NSApplication terminate:]` and returning from `main` call)
-//! runs C++ static destructors and `atexit` handlers while threads Hex does
+//! runs C++ static destructors and `atexit` handlers while threads Volna does
 //! not join are still running: CoreAudio's IO threads or ggml's residency-set
 //! keep-alive. Those destructors tear down native globals under them; ggml's
 //! Metal device list aborts in `ggml_metal_rsets_free` unless every Metal
-//! buffer was already freed. So Hex drains its own work first, then ends with
-//! `_exit`, which runs none of them. Nothing Hex keeps relies on them: the
+//! buffer was already freed. So Volna drains its own work first, then ends with
+//! `_exit`, which runs none of them. Nothing Volna keeps relies on them: the
 //! drain flushes the event log, and settings, history, and meetings are saved
 //! atomically when they change. A meeting recording at quit keeps its audio
 //! and finishes its transcript at the next launch.
@@ -84,11 +84,12 @@ fn finish_within(drain: &Drain, deadline: Duration) -> ! {
         .name("hex-exit-deadline".into())
         .spawn(move || {
             std::thread::sleep(deadline);
-            tracing::warn!("Hex stopped before its workers finished");
+            tracing::warn!("Volna stopped before its workers finished");
             end_process();
         });
+    crate::screen_context::shutdown();
     drain.run();
-    tracing::info!("Hex stopped");
+    tracing::info!("Volna stopped");
     end_process()
 }
 

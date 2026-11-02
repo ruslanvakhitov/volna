@@ -10,6 +10,8 @@ and model-download recovery guidance. The initial map was source-only. Listed ch
 locators unless an executed result is explicitly recorded, as in the
 [keyboard-layout verification](recovery.md#keyboard-layout-resolution).
 
+[Volna screen context](screen-context.md) adds local OCR and vocabulary per app to the macOS dictation path.
+
 ## Product Map
 
 ```ts

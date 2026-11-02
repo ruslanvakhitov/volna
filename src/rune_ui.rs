@@ -1,4 +1,4 @@
-//! Hex's window on every OS, on Rune.
+//! Volna's window on every OS, on Rune.
 //!
 //! The window talks to a host in the same process: on Linux the dictation
 //! host beside it (`linux_host`); on Windows and macOS the runtime thread
@@ -12,6 +12,7 @@
 mod activity;
 #[cfg(hex_capture)]
 pub(crate) mod capture_capsule;
+mod context;
 mod controls;
 #[cfg(target_os = "macos")]
 pub(crate) mod deep_link;
@@ -90,7 +91,7 @@ const DRAFT_DELAY: Duration = Duration::from_millis(250);
 /// the setup beat, permission polling) is checked while the window shows.
 const WINDOW_TICK: Duration = Duration::from_millis(250);
 
-/// Runs the Linux window's app on the main thread until Hex quits: the
+/// Runs the Linux window's app on the main thread until Volna quits: the
 /// window side of `linux_app`'s seam. It starts without a window; each
 /// `Activate` opens or focuses it with the launcher's activation token, and
 /// closing it keeps the app, its state, and the host running.
@@ -183,14 +184,14 @@ fn managed_note() -> &'static str {
     tr("Managed by your organization")
 }
 
-/// A `hex://` link the system opened with Hex: a story link opens the window
+/// A `hex://` link the system opened with Volna: a story link opens the window
 /// on that playground story; anything else is ignored.
 #[cfg(target_os = "macos")]
 fn on_open_url(ui: &mut Ui, link: &str, tx: &mut Tx) {
     if let Some(target) = deep_link::parse(link, story_link::scheme()) {
         match target {
             Ok(target) => deep_link::open(ui, target, tx),
-            Err(why) => tracing::warn!(%why, "ignored a link opened with Hex"),
+            Err(why) => tracing::warn!(%why, "ignored a link opened with Volna"),
         }
         crate::macos_rune::bring_window_forward();
         return;
@@ -198,7 +199,7 @@ fn on_open_url(ui: &mut Ui, link: &str, tx: &mut Tx) {
     let link = match story_link::parse(link, story_link::scheme()) {
         Ok(link) => link,
         Err(why) => {
-            tracing::warn!(%why, "ignored a link opened with Hex");
+            tracing::warn!(%why, "ignored a link opened with Volna");
             return;
         }
     };
@@ -332,7 +333,7 @@ fn build(init: impl FnOnce() -> Ui + 'static, playground: PlaygroundMode) -> run
 }
 
 /// Closing the window saves pending text edits and stops a shortcut
-/// recording, as leaving a pane does. Hex keeps running.
+/// recording, as leaving a pane does. Volna keeps running.
 fn on_close(ui: &mut Ui, _: &mut Tx) {
     ui.flush_drafts();
     settings::cancel_capture(ui);
@@ -406,7 +407,7 @@ pub(crate) fn show(ui: &mut Ui, destination: Destination, tx: &mut Tx) {
     }
 }
 
-/// What this OS's Hex can do, by capability name, for `hex status` and the
+/// What this OS's Volna can do, by capability name, for `hex status` and the
 /// settings `hex settings` can change here.
 pub(crate) fn capabilities() -> std::collections::BTreeMap<String, bool> {
     platform::Capabilities::current()
@@ -416,7 +417,7 @@ pub(crate) fn capabilities() -> std::collections::BTreeMap<String, bool> {
         .collect()
 }
 
-/// Whether this OS's Hex has the capability `name` ([`capabilities`]).
+/// Whether this OS's Volna has the capability `name` ([`capabilities`]).
 pub(crate) fn capability(name: &str) -> bool {
     platform::Capabilities::current()
         .fields()
@@ -518,7 +519,7 @@ pub(crate) fn meeting_failed(ui: &mut Ui, error: String) {
 }
 
 /// `hex app -- --snap out.png --scene …`: a headless render of a fixture
-/// scene, or `live` for the running Hex's `hex status`.
+/// scene, or `live` for the running Volna's `hex status`.
 #[cfg(target_os = "linux")]
 pub(crate) fn render() {
     let with_playground =
@@ -552,7 +553,7 @@ pub(crate) fn fixed_window() -> rune::WindowOptions {
 
 fn spec() -> AppSpec<Ui> {
     AppSpec {
-        title: "Hex",
+        title: "Volna",
         size: WINDOW_SIZE,
         // Narrower windows crowd the sidebar and rows.
         min_size: Some((860.0, 560.0)),
@@ -665,6 +666,7 @@ pub(crate) struct Ui {
     build_preview: Option<BuildKind>,
     capture: Capture,
     vocabulary: vocabulary::VocabularyEditor,
+    context: context::State,
     /// The model the service was last seen preparing, and since when.
     preparing: Option<(TranscriptionModelId, Instant)>,
     /// When a text field last changed without being saved.
@@ -692,7 +694,7 @@ pub(crate) struct Ui {
     hud_copied: bool,
     /// HUD Lab saved Dot scope's tuning, until the next change.
     hud_saved: bool,
-    /// Settings saves and Quit Hex a fixture recorded.
+    /// Settings saves and Quit Volna a fixture recorded.
     saved: usize,
     quit_requested: bool,
 }
@@ -773,6 +775,7 @@ impl Ui {
             build_preview: None,
             capture: Capture::Idle,
             vocabulary,
+            context: context::State::default(),
             preparing: None,
             draft_since: None,
             duck_volume_drag: None,
@@ -1108,7 +1111,7 @@ fn on_key(ui: &mut Ui, event: &rune::KeyEvent, tx: &mut Tx) -> bool {
         tx.toggle_playground();
         return true;
     }
-    // Ctrl+Q quits Hex on Linux, as Quit Hex in the sidebar does (#808).
+    // Ctrl+Q quits Volna on Linux, as Quit Volna in the sidebar does (#808).
     // macOS's menu bar owns ⌘Q; Windows quits from its tray.
     #[cfg(target_os = "linux")]
     if event.key == rune::Key::Command('q') && !event.mods.shift && !event.mods.alt {
@@ -1295,7 +1298,7 @@ fn poll(ui: &mut Ui, clock: f64, tx: &mut Tx) -> bool {
         }
         if let Some(settings) = settings {
             changed |= ui.adopt(settings);
-            // A pane the adopted settings hide (the Hex Microphone turned
+            // A pane the adopted settings hide (the Volna Microphone turned
             // off from `hex settings`) leaves for General.
             if !ui.pane.shown(ui) {
                 ui.pane = Pane::General;
@@ -1402,7 +1405,7 @@ fn window_focused(ui: &mut Ui, focused: bool, tx: &mut Tx) {
         ui.send(Request::Desktop(DesktopAction::WindowFocused));
     }
     // Screen Recording is often switched on in System Settings, so the
-    // Annotate pane reads it again as soon as Hex comes back.
+    // Annotate pane reads it again as soon as Volna comes back.
     #[cfg(hex_capture)]
     if focused && ui.pane == Pane::Annotate && ui.platform.scrawl.is_some() {
         ui.ask(platform::PlatformRequest::Scrawl(

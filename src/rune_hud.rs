@@ -492,7 +492,16 @@ impl DotUniforms {
             island: layout
                 .island
                 .map_or([0.0; 4], |island| island_shape(island, pose)),
-            field: [field_radius(layout, pose), 0.0, 0.0, 0.0],
+            field: [
+                field_radius(layout, pose),
+                if crate::screen_context::contextual() {
+                    1.0
+                } else {
+                    0.0
+                },
+                0.0,
+                0.0,
+            ],
         }
     }
 }
@@ -583,7 +592,7 @@ impl Compositor<Hud> for HudCompositor {
         self.animating.load(Ordering::Acquire)
     }
 
-    /// The view is empty, so Rune's UI pass is skipped: Hex's own pass
+    /// The view is empty, so Rune's UI pass is skipped: Volna's own pass
     /// clears the target.
     fn render(&mut self, f: &mut Frame<'_, Hud>) {
         let reduce = f.rt.reduced_motion;

@@ -607,7 +607,7 @@ pub(super) fn provisional_title(
     Ok(title)
 }
 
-/// Rewrites only Hex's parts of the Markdown: the heading when it still
+/// Rewrites only Volna's parts of the Markdown: the heading when it still
 /// reads `previous_title`, and the notes block between its markers (inserted
 /// above `## Transcript` the first time). Everything else is preserved.
 pub(super) fn apply_notes(
@@ -701,9 +701,9 @@ fn update_markdown_file(
 }
 
 /// The file is replaced atomically, and only if nothing changed it meanwhile.
-/// `written` is the SHA-256 of the copy Hex last wrote; it follows the
+/// `written` is the SHA-256 of the copy Volna last wrote; it follows the
 /// rewrite only while the file was still that copy, so a file the user
-/// edited never becomes Hex's to expire.
+/// edited never becomes Volna's to expire.
 fn rewrite_markdown_file(
     path: &Path,
     written: &mut Option<String>,

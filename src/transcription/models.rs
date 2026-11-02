@@ -506,7 +506,7 @@ pub const MODELS: &[ModelDefinition] = &[
         // on a FLEURS English clip), so it keeps v3's figure.
         realtime: "~33x",
         // LibriSpeech test-clean, transcribe.cpp's published conversion
-        // benchmark (`model_benchmarks`); not measured in Hex.
+        // benchmark (`model_benchmarks`); not measured in Volna.
         word_error_rate: Some(1.80),
         streams: false,
         runtime: ModelRuntime::Gguf(&PARAKEET_ULTRA_ARTIFACT),
@@ -522,7 +522,7 @@ pub const MODELS: &[ModelDefinition] = &[
         // On apollo's Vulkan GPU it ran 0.55 to 0.97 times as fast as
         // Parakeet v3 (17.9 s and 54.6 s German clips), against v3's ~33x.
         realtime: "~25x",
-        // LibriSpeech test-clean, Hex's run (`model_benchmarks`). On the same
+        // LibriSpeech test-clean, Volna's run (`model_benchmarks`). On the same
         // runs Parakeet v3 made fewer errors: 1.95% here, and on FLEURS 4.88%
         // English and 5.17% German against 7.91% and 10.39% (8.77% and
         // 10.46% with Auto). It is here to stream with the language set.
@@ -541,7 +541,7 @@ pub const MODELS: &[ModelDefinition] = &[
         // On apollo's Vulkan GPU it ran 1.2 to 1.4 times as fast as Parakeet
         // v3 (the FLEURS Russian test split, and a 10 s clip of it).
         realtime: "~40x",
-        // FLEURS Russian test, Hex's run (`model_benchmarks`): Parakeet v3
+        // FLEURS Russian test, Volna's run (`model_benchmarks`): Parakeet v3
         // scored 6.52% on the same run and Whisper large-v3-turbo 5.36%.
         word_error_rate: Some(5.37),
         streams: false,
@@ -631,7 +631,7 @@ pub(crate) fn choices_for_runtime(language: &str) -> Vec<ModelChoice> {
             (WhisperLargeV3Turbo, Vocabulary),
         ],
         // FLEURS Russian test: 5.37% WER against Parakeet v3's 6.52%, and
-        // Whisper turbo's 5.36% at a fifth of its speed (Hex's run).
+        // Whisper turbo's 5.36% at a fifth of its speed (Volna's run).
         "ru" => &[(GigaAmV3, Recommended), (WhisperLargeV3Turbo, Vocabulary)],
         "vi" => &[
             (Qwen3Asr06B, Recommended),
@@ -698,13 +698,13 @@ const WHISPER_LANGUAGES: &[&str] = &[
     "ha", "ba", "jw", "su", "yue",
 ];
 
-/// Whether `language` is a code Hex knows: one Settings lists, or one of
+/// Whether `language` is a code Volna knows: one Settings lists, or one of
 /// Whisper's, which only models that accept any language support.
 pub fn is_known_language(language: &str) -> bool {
     known_language(language).is_some()
 }
 
-/// `language` as Hex's own `'static` code, when Hex knows it.
+/// `language` as Volna's own `'static` code, when Volna knows it.
 pub(crate) fn known_language(language: &str) -> Option<&'static str> {
     LANGUAGES
         .iter()
@@ -797,7 +797,7 @@ pub fn is_in_place(model: &ModelDefinition) -> bool {
     !model.id.is_custom() && model_path(model).is_ok_and(|path| in_place(&path) && path.is_file())
 }
 
-/// Whether `path` is outside Hex's own models folder: a found file Hex
+/// Whether `path` is outside Volna's own models folder: a found file Volna
 /// reads in place and never writes, moves, or deletes.
 fn in_place(path: &Path) -> bool {
     models_dir().is_ok_and(|directory| !path.starts_with(directory))
@@ -836,7 +836,7 @@ pub fn verify_installed(model: &ModelDefinition, canceled: &AtomicBool) -> Resul
         return super::custom_models::verify(id, canceled);
     }
     let path = model_path(model)?;
-    // Receipts for found files live with Hex, never beside the file.
+    // Receipts for found files live with Volna, never beside the file.
     if in_place(&path) {
         return super::found_models::adopt_catalog(model, &path, canceled);
     }
@@ -1026,7 +1026,7 @@ pub fn download_with_stage_progress(
     let ModelRuntime::Gguf(artifact) = model.runtime else {
         bail!("{} is installed and managed by macOS", model.name);
     };
-    // An import has nothing to download: Hex checks its own copy. A catalog
+    // An import has nothing to download: Volna checks its own copy. A catalog
     // model another app already downloaded is checked and used where it is.
     let path = if model.id.is_custom() || model_path(model).is_ok_and(|path| in_place(&path)) {
         ModelPreparationStage::Verifying.store(stage);

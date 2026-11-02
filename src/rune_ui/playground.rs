@@ -1,4 +1,4 @@
-//! The playground (Labs › Playground): Rune's playground in Hex's window,
+//! The playground (Labs › Playground): Rune's playground in Volna's window,
 //! opened from its sidebar item or ⇧⌘D (Ctrl+Shift+D off macOS). It swaps
 //! the window for a folded list of
 //! prototypes (the onboarding options, live meeting notes, and on macOS
@@ -202,7 +202,7 @@ const PATHS: &[(&str, &str)] = &[
     ("mac-labs-link", "Window/General/Labs link"),
     ("mac-production", "Window/General/Production build"),
     ("mac-activity", "Window/Activity/Activity"),
-    ("mac-onboarding", "Window/Onboarding/Setting up Hex"),
+    ("mac-onboarding", "Window/Onboarding/Setting up Volna"),
     (
         "mac-onboarding-permissions",
         "Window/Onboarding/Permissions",
@@ -224,7 +224,7 @@ const PATHS: &[(&str, &str)] = &[
         "mac-onboarding-reopen",
         "Window/Onboarding/Your turn · reopen",
     ),
-    ("mac-onboarding-ready", "Window/Onboarding/Hex is ready"),
+    ("mac-onboarding-ready", "Window/Onboarding/Volna is ready"),
     ("portal", "Linux & Windows/Settings · portal shortcuts"),
     ("commands", "Linux & Windows/Settings · hex commands"),
     ("portal-mouse", "Linux & Windows/Settings · mouse button"),
@@ -312,7 +312,7 @@ fn playground() -> Playground<Ui> {
     let playground = Playground::new()
         .enabled(true)
         .bar(false)
-        .sizes(&[("Hex window", WINDOW_SIZE)])
+        .sizes(&[("Volna window", WINDOW_SIZE)])
         .group_order(GROUPS)
         .start_folded(true);
     let playground = super::onboarding_kit::stories(playground);

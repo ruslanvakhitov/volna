@@ -167,50 +167,37 @@ fn dot_scope_fragment(in: Varyings) -> @location(0) vec4f {
         composite(&result, mix(middle, u.base.rgb, t), strength * (1.0 - t) * shape);
     }
 
+    // Volna: a sea-glass ribbon of rounded voice bars.
     let columns = i32(u.columns + 0.5);
     let rows = i32(u.rows + 0.5);
-    let pitch = u.pitch;
-    let center_offset = vec2f(f32(columns) - 1.0, f32(rows) - 1.0) * 0.5;
-    let i0 = i32(round(point.x / pitch + center_offset.x));
-    let j0 = i32(round(point.y / pitch + center_offset.y));
-    let unlit = select(0.085, 0.07, dark);
-    let full = select(1.0, 0.96, dark);
-    let curve = select(0.75, 0.9, dark);
-    let presence = 0.5 + 0.5 * max(u.live, u.cool);
-    for (var dj = -1; dj <= 1; dj++) {
-        for (var di = -1; di <= 1; di++) {
-            let i = i0 + di;
-            let j = j0 + dj;
-            if (i < 0 || j < 0 || i >= columns || j >= rows) {
-                continue;
-            }
-            let center = (vec2f(f32(i), f32(j)) - center_offset) * pitch;
-            let cap = -rounded_box(center, half_size, radius);
-            let mask = sstep(1.4, 4.6, cap);
-            if (mask <= 0.0) {
-                continue;
-            }
-            let value = dot_value(j * columns + i);
-            let power = max(value.x, 1e-5);
-            let fresh = value.y;
-            let row = abs(center.y) / half_size.y;
-            let floor_alpha = unlit * (1.0 - 0.7 * sstep(0.35, 0.95, row)) * presence * u.grid;
-            let alpha = floor_alpha + (full - floor_alpha) * pow(power, curve * mix(1.4, 1.0, fresh));
-            let dot_radius = (0.25 + 0.17 * pow(power, 0.6))
-                * mix(1.0, mix(0.82, 1.0, fresh), sstep(0.03, 0.2, power)) * pitch;
-            let core = clamp(power * power * 1.1, 0.0, 0.9) * mix(0.3, 1.0, fresh);
-            let color = mix(u.base.rgb, u.core.rgb, core);
-            let from_center = length(point - center);
-            if (power > 0.05) {
-                composite(
-                    &result,
-                    color,
-                    0.132 * power * power * mask * shape * coverage(from_center - dot_radius * 2.0, aa));
-            }
-            composite(&result, color, alpha * mask * shape * coverage(from_center - dot_radius, aa));
+    let bar_count = 19;
+    let pitch = min(6.0, (u.width - 36.0) / f32(bar_count));
+    let index = i32(round(point.x / pitch + 9.0));
+    if (index >= 0 && index < bar_count) {
+        let source_col = clamp(i32(f32(index) / 18.0 * f32(columns - 1)), 0, columns - 1);
+        var energy = 0.0;
+        var weight = 0.001;
+        var freshness = 0.0;
+        for (var r = 0; r < rows; r++) {
+            let value = dot_value(r * columns + source_col);
+            let vertical = abs(f32(r) - f32(rows - 1) * 0.5) / max(1.0, f32(rows - 1) * 0.5);
+            energy += value.x * vertical;
+            weight += value.x;
+            freshness = max(freshness, value.y);
         }
+        let voice_height = 2.0 + 10.0 * clamp(energy / weight * 1.6, 0.0, 1.0);
+        let half_height = mix(voice_height, 2.0 + 2.0 * freshness, u.cool);
+        let center = vec2f((f32(index) - 9.0) * pitch, 0.0);
+        let bar = rounded_box(point - center, vec2f(1.65, half_height), 1.65);
+        let ink = mix(u.base.rgb, u.core.rgb, 0.35 + freshness * 0.45);
+        composite(&result, ink, (0.55 + freshness * 0.45) * shape * coverage(bar, aa));
     }
-
+    // The small scanning frame identifies contextual dictation.
+    if (u.field.y > 0.5) {
+        let mark = point - vec2f(-u.width * 0.5 + 11.0, 0.0);
+        let border = abs(rounded_box(mark, vec2f(3.5, 4.0), 1.2));
+        composite(&result, u.core.rgb, 0.9 * shape * coverage(border - 0.65, aa));
+    }
     result *= u.opacity;
     // The island is part of the notch, solid black however faded the
     // plate's contents are.

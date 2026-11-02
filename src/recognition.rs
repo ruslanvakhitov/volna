@@ -147,6 +147,7 @@ struct Hotkeys {
     /// The recording (or the last) skips processing: the raw shortcut or
     /// `hex dictation start --raw` started it.
     raw_capture: bool,
+    capture_context: Option<ContextSnapshot>,
 }
 
 impl Hotkeys {
@@ -336,6 +337,7 @@ pub fn listen(
         second: None,
         raw: None,
         raw_capture: false,
+        capture_context: None,
     };
     hotkeys.configure(CaptureInstant::now());
     let recording_environment = RecordingEnvironmentController::start();
@@ -898,14 +900,29 @@ pub fn listen(
             for (shortcut, action) in hotkeys.process(input_event, capture_at) {
                 if action == HotkeyAction::Start {
                     hotkeys.raw_capture = shortcut == Shortcut::Raw;
+                    hotkeys.capture_context = Some(if hotkeys.raw_capture {
+                        context.clone()
+                    } else {
+                        crate::screen_context::begin(&context, shortcut == Shortcut::Second)
+                    });
                 }
+                if action == HotkeyAction::Finish {
+                    if let Some(screen) = hotkeys
+                        .capture_context
+                        .as_ref()
+                        .and_then(|c| c.screen.as_ref())
+                    {
+                        screen.start();
+                    }
+                }
+                let fixed_context = hotkeys.capture_context.as_ref().unwrap_or(&context);
                 let accepted = handle_hotkey_action(
                     action,
                     hotkeys.raw_capture,
                     capture_at,
                     &input,
                     &dictation_worker,
-                    &context,
+                    fixed_context,
                     &input.device_name(),
                     &mut events,
                     indicator.as_ref(),
@@ -927,9 +944,20 @@ pub fn listen(
                 &input,
                 microphone_policy.release_while_idle,
             ))?
-            && microphone_policy.release_while_idle
         {
-            feedback::play(Tone::DictationStart);
+            if let Some(screen) = hotkeys
+                .capture_context
+                .as_ref()
+                .and_then(|c| c.screen.as_ref())
+            {
+                screen.start();
+            }
+            if microphone_policy.release_while_idle {
+                feedback::play(Tone::DictationStart);
+            }
+        }
+        if !hotkeys.any_recording() {
+            hotkeys.capture_context = None;
         }
         // Only once every queued edge is handled, so a release already seen
         // ends the press first.
@@ -1008,7 +1036,7 @@ pub fn listen(
         #[cfg(not(hex_capture))]
         let capture_escape = false;
         input_monitor.set_takes_escape(claims_escape(programmatic.is_some(), capture_escape));
-        // Toggle's cancel key is Hex's only while one of its shortcuts'
+        // Toggle's cancel key is Volna's only while one of its shortcuts'
         // recordings runs; the listener ignores keys during a programmatic one.
         input_monitor.set_takes_cancel(programmatic.is_none() && hotkeys.any_recording());
         if received_worker_event {
@@ -1024,6 +1052,13 @@ pub fn listen(
             match audio_event {
                 DictationAudioEvent::ReadyIntentional { .. } => {
                     if input.is_recording() {
+                        if let Some(screen) = hotkeys
+                            .capture_context
+                            .as_ref()
+                            .and_then(|c| c.screen.as_ref())
+                        {
+                            screen.start();
+                        }
                         feedback::play(Tone::DictationStart);
                     }
                 }
@@ -1363,7 +1398,7 @@ fn finish_hotkey_dictation(
     Ok(finished)
 }
 
-/// Whether Hex takes Escape from the app in front: only for a capture
+/// Whether Volna takes Escape from the app in front: only for a capture
 /// (drawing, its press, the capsule's picker), never for dictation, and never
 /// while a programmatic dictation records: the listener ignores every key
 /// then, so Escape stays with its owner app rather than being swallowed.
@@ -1381,7 +1416,7 @@ fn capture_refusal(other_recording: bool, suspended: bool) -> Option<ControlRepl
     } else if suspended {
         Some(ControlReply::error(
             "busy",
-            "Hex is recording a shortcut in Settings or reopening the microphone; try again",
+            "Volna is recording a shortcut in Settings or reopening the microphone; try again",
         ))
     } else {
         None
@@ -1473,6 +1508,11 @@ fn control_dictation(
                 ));
             }
             hotkeys.raw_capture = raw;
+            hotkeys.capture_context = Some(if raw {
+                context.clone()
+            } else {
+                crate::screen_context::begin(context, false)
+            });
             let accepted = handle_hotkey_action(
                 HotkeyAction::Start,
                 raw,
@@ -1506,7 +1546,7 @@ fn control_dictation(
                 capture_boundary(input, release_while_idle),
                 input,
                 worker,
-                context,
+                hotkeys.capture_context.as_ref().unwrap_or(context),
                 &device,
                 events,
                 indicator,
@@ -1524,7 +1564,7 @@ fn control_dictation(
                 ),
                 finished => finish_reply(
                     Some(finished),
-                    "Finished recording; Hex pastes the text when it's ready",
+                    "Finished recording; Volna pastes the text when it's ready",
                 ),
             }
         }
@@ -1590,7 +1630,7 @@ fn fail_capture(
 enum CaptureEnd {
     /// The capture never became a dictation; no feedback tone.
     Discarded(Option<DiscardCause>),
-    /// The capture ended unfinished: the cancel shortcut, or Hex itself
+    /// The capture ended unfinished: the cancel shortcut, or Volna itself
     /// when its shortcuts were suspended or the event tap was lost.
     Cancelled,
 }
@@ -1860,6 +1900,7 @@ mod tests {
             second: Some(DictationHotkey::new(base, true, control)),
             raw: None,
             raw_capture: false,
+            capture_context: None,
         };
         let mut press = |flags: u64, ms: u64| hotkeys.process(InputEvent::Flags(flags), at(ms));
         const START: HotkeyAction = HotkeyAction::Start;

@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key>
-  <string>anomaly.hex.scrawl-helper</string>
+  <string>com.ruslan.volna.scrawl-helper</string>
   <key>CFBundleName</key>
-  <string>Hex</string>
+  <string>Volna</string>
   <key>NSCameraUsageDescription</key>
-  <string>Hex mirrors and records a cabled iPhone's screen for a capture.</string>
+  <string>Volna mirrors and records a cabled iPhone's screen for a capture.</string>
 </dict>
 </plist>

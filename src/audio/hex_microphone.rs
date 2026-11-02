@@ -10,10 +10,10 @@ use crate::audio::voice_filter::{
     DictationSpan, HexMicEngine, ModeSpec, StageSpec, VoiceFilterMode,
 };
 
-const HEX_MICROPHONE_NAME: &str = "Hex Microphone";
-const HEX_MICROPHONE_UID: &str = "anomaly.hex.microphone";
-const HEX_MICROPHONE_SINK_NAME: &str = "Hex Microphone (Internal Sink)";
-const HEX_MICROPHONE_SINK_UID: &str = "anomaly.hex.microphone.sink";
+const HEX_MICROPHONE_NAME: &str = "Volna Microphone";
+const HEX_MICROPHONE_UID: &str = "com.ruslan.volna.microphone";
+const HEX_MICROPHONE_SINK_NAME: &str = "Volna Microphone (Internal Sink)";
+const HEX_MICROPHONE_SINK_UID: &str = "com.ruslan.volna.microphone.sink";
 const HEX_MICROPHONE_SAMPLE_RATE: u32 = 48_000;
 
 /// Capacity of the lock-free capture-to-sink ring buffer in 48 kHz mono samples (~341 ms).
@@ -30,7 +30,9 @@ const BURST_DECAY_CALLBACKS: usize = 32;
 
 pub fn is_hex_virtual_device_name(name: &str) -> bool {
     let trimmed = name.trim();
-    trimmed.eq_ignore_ascii_case(HEX_MICROPHONE_NAME)
+    trimmed.eq_ignore_ascii_case("Hex Microphone")
+        || trimmed.eq_ignore_ascii_case("Hex Microphone (Internal Sink)")
+        || trimmed.eq_ignore_ascii_case(HEX_MICROPHONE_NAME)
         || trimmed.eq_ignore_ascii_case(HEX_MICROPHONE_SINK_NAME)
         || trimmed.to_ascii_lowercase().starts_with("hex microphone")
 }
@@ -364,7 +366,7 @@ impl Drop for Dictation {
     }
 }
 
-/// Fills `out` with the next Hex Microphone audio, from the sink's
+/// Fills `out` with the next Volna Microphone audio, from the sink's
 /// real-time callback: adopts a retuned engine, follows the dictation, and
 /// filters the microphone audio queued in the ring.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -383,7 +385,7 @@ fn render(engine: &mut HexMicEngine, out: &mut [f32]) {
     engine.process_in_place(out);
 }
 
-/// One microphone stream's connection to Hex Microphone. Every capture stream
+/// One microphone stream's connection to Volna Microphone. Every capture stream
 /// has one, but only the dictation listener's current stream switches it on
 /// (`CaptureFeedSwitch`): the ring has a single producer, and a second stream
 /// on the same microphone, such as a meeting recording's, would interleave a
@@ -542,7 +544,7 @@ impl LinearResampler {
 // ── Status, Bundled Driver Discovery, and Privileged Install/Uninstall ──────
 
 const INSTALLED_DRIVER_PATH: &str = "/Library/Audio/Plug-Ins/HAL/HexMicrophone.driver";
-const EXPECTED_DRIVER_BUNDLE_ID: &str = "anomaly.hex.microphone.driver";
+const EXPECTED_DRIVER_BUNDLE_ID: &str = "com.ruslan.volna.microphone.driver";
 
 /// Fixed AppleScript for driver installation. No user input is ever interpolated
 /// into this script; `osascript` receives the verified bundled `.driver` path
@@ -671,7 +673,7 @@ fn bundled_driver_path() -> Option<PathBuf> {
         candidates.push(home.join("Library/Caches/hex-mic/HexMicrophone.driver"));
     }
     candidates.push(PathBuf::from(
-        "/Applications/Hex.app/Contents/Library/HexMicrophone.driver",
+        "/Applications/Volna.app/Contents/Library/HexMicrophone.driver",
     ));
     candidates
         .into_iter()
@@ -760,7 +762,7 @@ pub fn install_driver_async() {
             .spawn(|| {
                 let Some(src_bundle) = bundled_driver_path() else {
                     set_driver_action_state(DriverActionState::Failed(
-                        "Bundled HexMicrophone.driver was not found in Hex.app".into(),
+                        "Bundled HexMicrophone.driver was not found in Volna.app".into(),
                     ));
                     return;
                 };
@@ -835,7 +837,7 @@ pub fn status() -> HexMicrophoneStatus {
     }
 }
 
-/// Linux has no driver: Hex Microphone exists while the Voice Filter runs
+/// Linux has no driver: Volna Microphone exists while the Voice Filter runs
 /// (`pipewire_source`).
 #[cfg(target_os = "linux")]
 pub fn status() -> HexMicrophoneStatus {
@@ -866,7 +868,7 @@ pub fn status() -> HexMicrophoneStatus {
     }
 }
 
-/// Makes this process the Hex Microphone host, starting the sink whenever
+/// Makes this process the Volna Microphone host, starting the sink whenever
 /// the Voice Filter is on (`app_settings::hex_microphone_enabled`). Only the listener hosts it, so CLI commands that load
 /// settings never start the pipeline.
 pub fn host_service() {
@@ -1571,8 +1573,10 @@ mod tests {
 
     #[test]
     fn virtual_device_names_are_excluded_from_self_capture() {
-        assert!(is_hex_virtual_device_name("Hex Microphone"));
-        assert!(is_hex_virtual_device_name("Hex Microphone (Internal Sink)"));
+        assert!(is_hex_virtual_device_name("Volna Microphone"));
+        assert!(is_hex_virtual_device_name(
+            "Volna Microphone (Internal Sink)"
+        ));
         assert!(is_hex_virtual_device_name("hex microphone"));
         assert!(!is_hex_virtual_device_name("MacBook Pro Microphone"));
         assert!(!is_hex_virtual_device_name("Shure MV7"));

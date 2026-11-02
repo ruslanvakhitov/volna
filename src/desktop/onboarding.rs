@@ -26,8 +26,8 @@ pub enum PermissionState {
     Ready,
     NeedsRequest,
     NeedsSettings,
-    /// Switched on in System Settings, but macOS applies it to Hex only
-    /// after Hex restarts.
+    /// Switched on in System Settings, but macOS applies it to Volna only
+    /// after Volna restarts.
     NeedsRestart,
 }
 
@@ -48,9 +48,9 @@ pub enum PermissionAction {
     RequestMicrophone,
     /// Everything else is turned on in System Settings, with the guide.
     ShowGuide(PermissionKind),
-    /// Clear stale TCC entries for Hex and reopen the prompt and guide.
+    /// Clear stale TCC entries for Volna and reopen the prompt and guide.
     ResetAndPrompt(PermissionKind),
-    /// Granted, waiting for Hex to restart.
+    /// Granted, waiting for Volna to restart.
     Restart,
 }
 
@@ -148,7 +148,7 @@ pub enum ItemStatus {
     Stale,
     /// Refused once: only System Settings can turn it on.
     Denied,
-    /// Switched on; macOS applies it once Hex restarts.
+    /// Switched on; macOS applies it once Volna restarts.
     Restart,
     /// Downloading, with progress from zero through one.
     Downloading(f32),
@@ -179,7 +179,7 @@ pub enum Practice {
     Waiting,
     Listening,
     Transcribing,
-    /// Released before Hex kept any audio, or the clip was silent.
+    /// Released before Volna kept any audio, or the clip was silent.
     TooShort,
     /// Transcribed, but no words came back.
     NothingHeard,
@@ -200,7 +200,7 @@ pub enum Input {
         relaunch_allowed: bool,
     },
     Reopen,
-    /// "Restart Hex" once every permission is on and one waits for it.
+    /// "Restart Volna" once every permission is on and one waits for it.
     Restart,
 }
 
@@ -208,7 +208,7 @@ pub enum Input {
 pub enum Effect {
     None,
     RequestMicrophone,
-    /// Open the Privacy pane with the guide beside it: drag Hex into the
+    /// Open the Privacy pane with the guide beside it: drag Volna into the
     /// list, or (for a refused microphone) switch it on.
     ShowGuide(PermissionKind),
     /// Clear stale TCC entries for this permission and reopen the prompt and
@@ -218,7 +218,7 @@ pub enum Effect {
     /// Every permission just turned on: move to the next step after a beat,
     /// so the last check is seen.
     AdvanceSoon,
-    /// Quit and reopen Hex, resuming the tour: at the practice step, or
+    /// Quit and reopen Volna, resuming the tour: at the practice step, or
     /// at setup while setup is unfinished.
     Relaunch,
     /// Close the tour.
@@ -246,10 +246,10 @@ pub struct View {
     /// outside the setup rows.
     pub show_download: bool,
     pub practice: Practice,
-    /// The listener needs a restart Hex will not do by itself again.
+    /// The listener needs a restart Volna will not do by itself again.
     pub reopen: bool,
-    /// Every permission is on, and at least one applies only after Hex
-    /// restarts: setup's primary action restarts Hex.
+    /// Every permission is on, and at least one applies only after Volna
+    /// restarts: setup's primary action restarts Volna.
     pub restart: bool,
 }
 
@@ -580,13 +580,8 @@ fn grantable(state: PermissionState) -> bool {
     )
 }
 
-/// Bundle identifiers of older macOS Hex releases (2.3.1 and the Swift app)
-/// whose stale TCC rows can shadow or confuse grants for `anomaly.hex`.
-pub const LEGACY_MAC_BUNDLE_IDS: [&str; 3] = [
-    "com.kitlangton.hex2",
-    "com.kitlangton.Hex",
-    "com.kitlangton.Hex.debug",
-];
+/// Volna has no retired bundle IDs. Never reset permissions of upstream Hex.
+pub const LEGACY_MAC_BUNDLE_IDS: [&str; 0] = [];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TccResetOutcome {
@@ -595,9 +590,9 @@ pub enum TccResetOutcome {
     Failed,
 }
 
-/// TCC services cleared for retired Hex bundle IDs when `kind` is missing.
+/// TCC services cleared for retired Volna bundle IDs when `kind` is missing.
 /// Both screen and system-audio lists live on the same System Settings pane, so
-/// clearing both leaves no duplicate Hex rows on either list.
+/// clearing both leaves no duplicate Volna rows on either list.
 pub const fn legacy_tcc_services(kind: PermissionKind) -> &'static [&'static str] {
     match kind {
         PermissionKind::Accessibility => &["Accessibility"],
@@ -608,7 +603,7 @@ pub const fn legacy_tcc_services(kind: PermissionKind) -> &'static [&'static str
     }
 }
 
-/// TCC services reset for the running Hex bundle on `"Still grey? Fix it"`.
+/// TCC services reset for the running Volna bundle on `"Still grey? Fix it"`.
 /// Resets only the stuck service so a working Screen Recording grant is never
 /// cleared while fixing System Audio, or vice versa.
 pub const fn own_tcc_services(kind: PermissionKind) -> &'static [&'static str] {
@@ -640,17 +635,17 @@ pub fn classify_tccutil_reset(code: Option<i32>, stderr: &str) -> TccResetOutcom
 /// unavailable (such as a loose binary).
 pub fn default_mac_bundle_id(test_build: Option<&str>) -> &'static str {
     if test_build == Some("1") {
-        "anomaly.hex.test"
+        "com.ruslan.volna.test"
     } else {
-        "anomaly.hex"
+        "com.ruslan.volna"
     }
 }
 
 /// How long after returning from System Settings an asked permission must stay
-/// untrusted before Hex offers `"Still grey? Fix it"`.
+/// untrusted before Volna offers `"Still grey? Fix it"`.
 pub const STALE_RETURN_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
 /// Fallback when System Settings stayed side-by-side without taking focus (such
-/// as under a tiling window manager) while Hex remained active and untrusted.
+/// as under a tiling window manager) while Volna remained active and untrusted.
 pub const STALE_SIDE_BY_SIDE_DELAY: std::time::Duration = std::time::Duration::from_secs(6);
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -660,9 +655,9 @@ pub struct SettingsFocus {
     pub hex_active: bool,
 }
 
-/// Tracks one asked permission across System Settings focus changes so Hex
+/// Tracks one asked permission across System Settings focus changes so Volna
 /// offers `"Still grey? Fix it"` only after the person went to System Settings,
-/// came back (or closed it), and Hex is still untrusted.
+/// came back (or closed it), and Volna is still untrusted.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct StalePermissionTracker {
     asked_at: Option<std::time::Instant>,
@@ -698,9 +693,9 @@ impl StalePermissionTracker {
         if self.stale {
             return true;
         }
-        // While System Settings' window is open and Hex is inactive (including
+        // While System Settings' window is open and Volna is inactive (including
         // during Touch ID / password sheets or dragging from Finder), the
-        // person has not returned to Hex yet.
+        // person has not returned to Volna yet.
         let away_in_settings =
             focus.settings_open && (focus.settings_frontmost || !focus.hex_active);
         if away_in_settings {
@@ -736,7 +731,7 @@ fn next_practice(current: Practice, observation: Observation) -> Practice {
 }
 
 /// A relaunch the tour started at most this long ago keeps it from
-/// relaunching again, so a grant that never reaches Hex cannot loop.
+/// relaunching again, so a grant that never reaches Volna cannot loop.
 pub const RELAUNCH_GUARD_MS: u64 = 120_000;
 
 static LISTENER_FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -767,7 +762,7 @@ pub fn relaunch_allowed(now_ms: u64) -> bool {
         .unwrap_or(false)
 }
 
-/// The step a relaunched Hex resumes at, consumed once.
+/// The step a relaunched Volna resumes at, consumed once.
 pub fn take_resume() -> Option<Step> {
     let directory = crate::app_paths::support_dir().ok()?;
     take_resume_at(&directory, unix_ms())
@@ -791,7 +786,7 @@ pub(crate) fn relaunch_allowed_at(directory: &Path, now_ms: u64) -> bool {
     relaunched_at(directory).is_none_or(|at| now_ms.saturating_sub(at) >= RELAUNCH_GUARD_MS)
 }
 
-/// A relaunch older than the guard is stale (Hex was quit and reopened
+/// A relaunch older than the guard is stale (Volna was quit and reopened
 /// later), so the tour does not resume from it.
 pub(crate) fn take_resume_at(directory: &Path, now_ms: u64) -> Option<Step> {
     let at = relaunched_at(directory)?;
@@ -871,7 +866,7 @@ pub(crate) fn completion_recorded_at(directory: &Path) -> bool {
     true
 }
 
-/// Once per settings file from before `anomaly.hex` (2.3.1 shared the `hex`
+/// Once per settings file from before `com.ruslan.volna` (2.3.1 shared the `hex`
 /// folder): macOS gave the new identity none of the old grants, so setup
 /// that is not ready at launch reopens the tour instead of counting the old
 /// completion. Setup that is ready changes nothing.
@@ -981,7 +976,7 @@ pub fn status(selection: &TranscriptionSelection) -> SetupStatus {
 pub fn status_with_transcription_model(transcription_model: bool) -> SetupStatus {
     SetupStatus {
         microphone: microphone_state(),
-        // Accessibility also grants the listen-event access Hex's shortcut
+        // Accessibility also grants the listen-event access Volna's shortcut
         // taps need, so Input Monitoring is never asked for.
         accessibility: accessibility_state(CGPreflightPostEventAccess(), AXIsProcessTrusted()),
         transcription_model,
@@ -1000,7 +995,7 @@ pub fn status_with_transcription_model(transcription_model: bool) -> SetupStatus
     }
 }
 
-/// Windows Settings' "Where Hex turns the microphone on".
+/// Windows Settings' "Where Volna turns the microphone on".
 #[cfg(target_os = "windows")]
 pub const WINDOWS_MICROPHONE_SETTINGS: &str = "ms-settings:privacy-microphone";
 
@@ -1051,7 +1046,7 @@ pub fn request_microphone() {
 }
 
 /// Reopens the installed app once this process exits. Returns false outside
-/// an app bundle (a development binary), where the person reopens Hex.
+/// an app bundle (a development binary), where the person reopens Volna.
 /// The relaunch keeps this process's `HEX_*` environment.
 #[cfg(target_os = "macos")]
 pub fn spawn_relaunch() -> bool {
@@ -1133,7 +1128,7 @@ fn microphone_state() -> PermissionState {
     microphone_authorization_state(status)
 }
 
-/// Accessibility reaches a running Hex: `AXIsProcessTrusted` follows the
+/// Accessibility reaches a running Volna: `AXIsProcessTrusted` follows the
 /// switch, and the listener's event taps, created only once setup is ready,
 /// are allowed (macOS offers no "Quit & Reopen" for it, as it does for Input
 /// Monitoring). Only `CGPreflightPostEventAccess` keeps its launch-time answer,
@@ -1190,7 +1185,7 @@ mod tests {
             ("HEXAGON", "no"),
         ]
         .map(|(key, value)| (key.into(), value.into()));
-        let arguments = relaunch_arguments(42, Path::new("/Applications/Hex.app"), vars);
+        let arguments = relaunch_arguments(42, Path::new("/Applications/Volna.app"), vars);
         let arguments = arguments
             .iter()
             .map(|argument| argument.to_str().unwrap())
@@ -1208,7 +1203,7 @@ mod tests {
                 "HEX_EXPERIMENTAL_MIC=a=b,c",
                 "--env",
                 "HEX_RETAIN_DICTATION_AUDIO=1",
-                "/Applications/Hex.app",
+                "/Applications/Volna.app",
             ]
         );
     }
@@ -2016,17 +2011,10 @@ mod tests {
 
     #[test]
     fn tcc_services_scope_own_resets_narrowly_and_legacy_cleanup_across_shared_pane() {
-        assert_eq!(
-            LEGACY_MAC_BUNDLE_IDS,
-            [
-                "com.kitlangton.hex2",
-                "com.kitlangton.Hex",
-                "com.kitlangton.Hex.debug"
-            ]
-        );
-        assert_eq!(default_mac_bundle_id(None), "anomaly.hex");
-        assert_eq!(default_mac_bundle_id(Some("0")), "anomaly.hex");
-        assert_eq!(default_mac_bundle_id(Some("1")), "anomaly.hex.test");
+        assert_eq!(LEGACY_MAC_BUNDLE_IDS, [] as [&str; 0]);
+        assert_eq!(default_mac_bundle_id(None), "com.ruslan.volna");
+        assert_eq!(default_mac_bundle_id(Some("0")), "com.ruslan.volna");
+        assert_eq!(default_mac_bundle_id(Some("1")), "com.ruslan.volna.test");
 
         assert_eq!(
             own_tcc_services(PermissionKind::Accessibility),
@@ -2092,7 +2080,7 @@ mod tests {
         assert!(!tracker.poll(t0 + Duration::from_secs(1), true, in_settings));
         assert!(!tracker.poll(t0 + Duration::from_secs(12), true, touch_id_over_settings));
 
-        // Returning to Hex starts the 2 s grace window; granting clears it.
+        // Returning to Volna starts the 2 s grace window; granting clears it.
         assert!(!tracker.poll(t0 + Duration::from_secs(13), true, back_in_hex));
         assert!(!tracker.poll(t0 + Duration::from_millis(14_900), true, back_in_hex));
         assert!(tracker.poll(t0 + Duration::from_secs(15), true, back_in_hex));
@@ -2105,7 +2093,7 @@ mod tests {
         assert!(!tracker.poll(t0 + Duration::from_secs(2), true, settings_closed));
         assert!(tracker.poll(t0 + Duration::from_secs(4), true, settings_closed));
 
-        // Tiling window managers where Hex stays active beside System Settings
+        // Tiling window managers where Volna stays active beside System Settings
         // fall back after STALE_SIDE_BY_SIDE_DELAY.
         tracker.note_asked(t0);
         assert!(!tracker.poll(t0 + Duration::from_secs(5), true, back_in_hex));

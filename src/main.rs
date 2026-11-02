@@ -1,4 +1,4 @@
-/// The version Hex reports: the release version, or `0.0.0-dev-local-<commit>`
+/// The version Volna reports: the release version, or `0.0.0-dev-local-<commit>`
 /// for a build outside the Release workflow (build.rs).
 const VERSION: &str = env!("HEX_BUILD_VERSION");
 
@@ -57,10 +57,12 @@ mod policy;
 mod recognition;
 mod rune_hud;
 mod rune_ui;
+mod screen_context;
 #[cfg(target_os = "macos")]
 mod suppression;
 mod transcription;
 mod updater;
+mod volna_theme;
 #[cfg(target_os = "windows")]
 mod windows;
 
@@ -77,14 +79,14 @@ use color_eyre::eyre::eyre;
 #[cfg(target_os = "macos")]
 #[derive(Parser)]
 #[command(
-    name = "hex",
+    name = "volna",
     version = crate::VERSION,
     about = "Local, observable voice control",
     long_about = "Local, observable voice control.\n\n\
         Control commands (status, dictation, meetings record, settings, model, window, …) drive \
-        the one running Hex over its owner-only local API and never launch it, except `start` \
+        the one running Volna over its owner-only local API and never launch it, except `start` \
         and `restart`. Every one takes --json for a versioned reply (docs/cli.md). Exit codes: \
-        0 done or nothing to change, 1 refused or failed, 2 usage, 3 Hex isn't running.",
+        0 done or nothing to change, 1 refused or failed, 2 usage, 3 Volna isn't running.",
     after_help = "Run `hex <command> --help` for details, or `hex settings list` for every setting."
 )]
 struct Cli {
@@ -103,6 +105,11 @@ pub(crate) const DEVELOPER_FEATURES_ENABLED: bool = cfg!(debug_assertions);
 #[cfg(target_os = "macos")]
 #[derive(Subcommand)]
 enum Command {
+    /// Local screen context and app dictionaries.
+    Context {
+        #[command(subcommand)]
+        command: screen_context::Command,
+    },
     #[command(flatten)]
     Control(control::cli::ControlCli),
     /// Run the desktop app with local dictation.
@@ -203,7 +210,7 @@ enum DevCommand {
         #[arg(required = true)]
         wavs: Vec<PathBuf>,
     },
-    /// Render offline audio through the Hex Microphone voice filter.
+    /// Render offline audio through the Volna Microphone voice filter.
     VoiceFilter {
         #[command(subcommand)]
         command: VoiceFilterCommand,
@@ -294,7 +301,7 @@ fn main() -> Result<()> {
         rune::prewarm_gpu();
     }
     // A window of its own: no data folder, log, lock, or settings, so it
-    // runs beside the installed Hex.
+    // runs beside the installed Volna.
     #[cfg(hex_capture)]
     if let Some(Command::CapsulePlayground { rune_args }) = &cli.command {
         keyboard::initialize_layout()?;
@@ -302,11 +309,12 @@ fn main() -> Result<()> {
         return Ok(());
     }
     // Control and read commands (status, settings, history, meetings, mcp,
-    // labs, …) talk to the running Hex or read files: no data folder, log,
+    // labs, …) talk to the running Volna or read files: no data folder, log,
     // lock, GUI, or permission setup of their own, so an agent may run them
     // over SSH while the app is running.
     let cli = match cli.command {
         Some(Command::Control(command)) => control::cli::finish(control::cli::run(command)),
+        Some(Command::Context { command }) => return screen_context::run(&command),
         command => Cli { command },
     };
     #[cfg(debug_assertions)]
@@ -361,7 +369,7 @@ fn main() -> Result<()> {
         );
     }
     // A headless render (`hex app -- --snap …`) draws fixtures: no data
-    // folder, log, lock, or settings, so it never touches the user's Hex.
+    // folder, log, lock, or settings, so it never touches the user's Volna.
     if let Some(Command::App { rune_args, .. }) = &cli.command
         && !rune_args.is_empty()
     {
@@ -386,6 +394,7 @@ fn main() -> Result<()> {
     });
     match command {
         Command::App { device, .. } => open_app(event_path, device),
+        Command::Context { command } => screen_context::run(&command),
         Command::Listen { device } => {
             let _instance = desktop::instance::acquire("listener")?;
             labs::log_launch();
@@ -577,6 +586,7 @@ fn main() -> Result<()> {
 fn open_app(event_path: PathBuf, device: Option<String>) -> Result<()> {
     let _instance = desktop::instance::acquire("listener")?;
     labs::log_launch();
+    screen_context::warmup();
     audio::hex_microphone::host_service();
     macos_rune::run(
         &SHUTDOWN,
@@ -600,7 +610,7 @@ fn mcp_alias_arguments(mut arguments: Vec<std::ffi::OsString>) -> Vec<std::ffi::
 
 #[cfg(target_os = "macos")]
 fn is_bundled_app_executable(name: Option<&std::ffi::OsStr>) -> bool {
-    name.is_some_and(|name| name == "hex")
+    name.is_some_and(|name| name == "hex" || name == "volna")
 }
 
 /// Whether this launch runs the app: `hex app` without Rune's own (headless)
@@ -827,7 +837,7 @@ mod tests {
             opens_app(Cli::parse_from(arguments).command.as_ref(), bundled)
         };
         assert!(opens(&["hex"]));
-        assert!(opens(&["/Applications/Hex.app/Contents/MacOS/hex"]));
+        assert!(opens(&["/Applications/Volna.app/Contents/MacOS/hex"]));
         assert!(opens(&["hex", "app"]));
         assert!(opens(&["hex", "app", "--device", "MacBook Pro Microphone"]));
         assert!(!opens(&["hex", "app", "--", "--snap", "/tmp/a.png"]));

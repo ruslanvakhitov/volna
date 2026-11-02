@@ -22,7 +22,7 @@ pub struct SettingValue {
     pub choices: Vec<String>,
     pub writable: bool,
     pub about: String,
-    /// False where this OS's Hex lacks what the setting needs ([`needs`]):
+    /// False where this OS's Volna lacks what the setting needs ([`needs`]):
     /// it is kept, but does nothing here and `set` refuses it.
     #[serde(default = "available")]
     pub available: bool,
@@ -149,7 +149,7 @@ const KEYS: &[Key] = &[
             "analog",
             "thock",
         ]),
-        "Which sounds play; classic, Hex's original tones, is the default",
+        "Which sounds play; classic, Volna's original tones, is the default",
     ),
     optional(
         "microphone",
@@ -205,7 +205,7 @@ const KEYS: &[Key] = &[
         "cancel_hotkey",
         Kind::Shortcut(HotkeySlot::Cancel),
         "Toggle mode's cancel shortcut, Escape by default: discards the recording, \
-         nothing pasted or saved. Hex takes the key only while a toggled recording runs",
+         nothing pasted or saved. Volna takes the key only while a toggled recording runs",
     ),
     optional(
         "raw_dictation_hotkey",
@@ -223,7 +223,7 @@ const KEYS: &[Key] = &[
     key(
         "show_dock_icon",
         Kind::Bool,
-        "Keep Hex in the Dock when Settings is closed (macOS)",
+        "Keep Volna in the Dock when Settings is closed (macOS)",
     ),
     read_only(
         "transcription.model",
@@ -241,7 +241,7 @@ const KEYS: &[Key] = &[
         "transcription_recents",
         Kind::Json,
         "Recently used models, each with its language",
-        "Hex records these as you switch models",
+        "Volna records these as you switch models",
     ),
     key(
         "vocabulary_boost",
@@ -401,7 +401,7 @@ const KEYS: &[Key] = &[
     key(
         "labs.stop_when_call_ends",
         Kind::Bool,
-        "Labs: a meeting recording Hex started on its own stops 30 s after its call app leaves the microphone and goes quiet, unless you keep recording (macOS)",
+        "Labs: a meeting recording Volna started on its own stops 30 s after its call app leaves the microphone and goes quiet, unless you keep recording (macOS)",
     ),
     key(
         "labs.output_fixes",
@@ -431,7 +431,7 @@ const KEYS: &[Key] = &[
     optional(
         "meetings.output_folder",
         Kind::Path,
-        "Folder for meeting Markdown; none uses ~/Documents/Hex Meetings",
+        "Folder for meeting Markdown; none uses ~/Documents/Volna Meetings",
     ),
     key(
         "meetings.summarize_with_apple_intelligence",
@@ -487,7 +487,7 @@ const KEYS: &[Key] = &[
     key(
         "experimental.hex_microphone",
         Kind::Bool,
-        "Labs: the Voice Filter and its Hex Microphone virtual input",
+        "Labs: the Voice Filter and its Volna Microphone virtual input",
     ),
     key(
         "experimental.hex_microphone_mode",
@@ -502,22 +502,22 @@ const KEYS: &[Key] = &[
             "underwater",
             "far",
         ]),
-        "What Hex Microphone does to your voice while you dictate",
+        "What Volna Microphone does to your voice while you dictate",
     ),
     key(
         "experimental.hex_microphone_comfort_noise",
         Kind::Bool,
-        "Hex Microphone fills silence with soft noise",
+        "Volna Microphone fills silence with soft noise",
     ),
     key(
         "experimental.hex_microphone_strength",
         UNIT,
-        "How strongly Hex Microphone applies its filter, from 0 to 1",
+        "How strongly Volna Microphone applies its filter, from 0 to 1",
     ),
     key(
         "enable_on_launch",
         Kind::Bool,
-        "Start listening when Hex opens (Windows and Linux)",
+        "Start listening when Volna opens (Windows and Linux)",
     ),
     key(
         "paste_with_shift",
@@ -527,7 +527,7 @@ const KEYS: &[Key] = &[
     key(
         "gnome_keyboard_shortcuts",
         Kind::Bool,
-        "Hex's own GNOME custom keyboard shortcuts, for GNOME without a shortcuts portal (Linux)",
+        "Volna's own GNOME custom keyboard shortcuts, for GNOME without a shortcuts portal (Linux)",
     ),
     key(
         "share_dictation_shortcut",
@@ -574,7 +574,7 @@ const CAPTURE_KEYS: &[Key] = &[
     key(
         "capture.transcriber",
         Kind::Choice(&["parakeet", "apple"]),
-        "What transcribes a capture's narration: Hex's loaded model or Apple's",
+        "What transcribes a capture's narration: Volna's loaded model or Apple's",
     ),
     optional(
         "capture.folder",
@@ -605,7 +605,7 @@ const CAPTURE_KEYS: &[Key] = &[
     key(
         "capture.show_overlays_in_recordings",
         Kind::Bool,
-        "Let screen recordings, captures included, show Hex's capsules, ink, and HUD (for demos)",
+        "Let screen recordings, captures included, show Volna's capsules, ink, and HUD (for demos)",
     ),
 ];
 #[cfg(hex_capture)]
@@ -613,7 +613,7 @@ const RETENTION_DAYS: Kind = Kind::Integer { min: 1, max: 3650 };
 #[cfg(not(hex_capture))]
 const CAPTURE_KEYS: &[Key] = &[];
 
-/// Settings that act only where Hex has a capability (by its
+/// Settings that act only where Volna has a capability (by its
 /// `rune_ui::capabilities` name), the same one that shows their row in the
 /// window. The first matching prefix decides.
 const NEEDS: &[(&str, &str)] = &[
@@ -658,7 +658,7 @@ fn unavailable_under(name: &str, policy: crate::policy::Policy) -> Option<Contro
     Some(ControlError::new(
         "unsupported",
         format!(
-            "`{name}` does nothing on this OS: it needs {capability}, which Hex has only elsewhere"
+            "`{name}` does nothing on this OS: it needs {capability}, which Volna has only elsewhere"
         ),
     ))
 }
@@ -675,7 +675,7 @@ fn keys() -> impl Iterator<Item = &'static Key> {
     KEYS.iter().chain(CAPTURE_KEYS)
 }
 
-/// Settings `hex settings` never shows: Hex's own bookkeeping.
+/// Settings `hex settings` never shows: Volna's own bookkeeping.
 #[cfg(test)]
 const INTERNAL: &[&str] = &["migrations", "mouse_shortcut_notice"];
 
@@ -904,7 +904,7 @@ pub fn apply(
                     return Err(ControlError::new(
                         "shortcut-in-use",
                         format!(
-                            "{} is already in use by another Hex shortcut",
+                            "{} is already in use by another Volna shortcut",
                             format_hotkey(binding)
                         ),
                     ));
@@ -1367,7 +1367,7 @@ mod tests {
     }
 
     /// Fails when a persisted setting has no `hex settings` key: add one to
-    /// `KEYS` (or to `INTERNAL` if it is Hex's own bookkeeping, or to
+    /// `KEYS` (or to `INTERNAL` if it is Volna's own bookkeeping, or to
     /// `OWN_COMMAND` if another `hex` command edits it).
     #[test]
     fn every_persisted_setting_has_a_cli_key() {
