@@ -98,3 +98,17 @@ loading. Explicit per-stage GPU selection read the same Telegram image in
 device, falls back to CPU and uses explicit Russian/English languages rather
 than automatic language detection. The subprocess alone did not cure the ANE
 loading stall.
+
+Observed on the installed Volna 0.1.4 build on November 3, 2026: an authenticated
+native probe of the foreground Telegram app captured an 880,367-byte JPEG and
+read 2,210 characters in 3,868 ms (4,000 ms total), learning 96 terms. A subsequent
+dictionary-only probe loaded those 96 terms without a screenshot, corrected a
+term's spelling and preserved the supplied number 15. A separate local-model
+check corrected the public synthetic names “конфидай” and “кодекс” to ConfidAI
+and Codex, also preserving 15. The running app reported its microphone,
+Accessibility, transcription model and screen permission ready, with its hotkey
+listener enabled. These probes exercise the native session, reader and corrector;
+they do not establish physical audio capture, paste or History retention on this
+build. Earlier physical dictations established audio/paste and retained evidence
+but exposed the OCR failures described above. No screenshots or extracted private
+text from these checks are stored in the repository.
