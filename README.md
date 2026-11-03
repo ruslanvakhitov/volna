@@ -3,15 +3,15 @@
 Local voice dictation with vocabulary that understands the app you are using.
 An independently branded macOS fork of [Hex](https://github.com/anomalyco/hex).
 
-- **Option**: hold, speak, release. Dictation reuses the active app’s learned terms.
+- **Option**: hold, speak, release. Dictation reuses the active app’s saved text context.
 - **Right Command**: hold, speak, release. Volna takes one screenshot of the active
   app’s display and reads its Russian/English text locally while you speak.
-- **Per-app dictionaries**: terms learned in Telegram stay with Telegram. The
-  screen excerpt helps correct names and technical vocabulary after speech recognition.
+- **Per-app context**: screen text remembered in Telegram stays with Telegram.
+  Plain text helps correct names, acronyms and technical vocabulary after speech recognition.
 - **Local processing**: Apple Vision OCR and Qwen3.5-0.8B through a private,
-  cloud-disabled Ollama runtime. No API key. History keeps the screenshot, extracted text, available terms and
+  cloud-disabled Ollama runtime. No API key. History keeps the screenshot, extracted text, reference text and
   the before/after correction locally for each retained dictation. Screenshots
-  follow History retention and a 128 MiB cap. Learned app terms expire after 30 days.
+  follow History retention and a 128 MiB cap. Saved app text expires after 30 days.
 - **Inspectable results**: History shows OCR errors, deadlines, dictionary-only
   fallback and unchanged results, as well as corrections. Existing records cannot
   recover screenshots from earlier versions. Turning History Off stops new evidence.
@@ -40,9 +40,12 @@ installed Ollama runtime and its licenses. The model lives separately in
 without Developer ID notarization or upstream automatic updates.
 
 Settings → General includes the contextual shortcut, screen access, learning,
-local correction and inspectable app dictionaries. Forgetting a dictionary also
+local correction and inspectable app context. Forgetting an app also
 invalidates learning from a screenshot already in flight. Shared, manually edited
-vocabulary and the upstream speech-model picker remain available.
+vocabulary and the upstream speech-model picker remain available. Context is stored
+as up to four recent plain-text screen excerpts per app, without keyword ranking.
+Keyword-only stores from earlier builds remain on disk but are not used as text
+context; the next Right Command dictation starts the new app memory.
 
 ```sh
 # Read status or inspect learned terms; these do not take a screenshot.

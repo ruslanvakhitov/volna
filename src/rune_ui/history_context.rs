@@ -100,33 +100,29 @@ pub(super) fn detail(ui: &Ui, p: Paint, id: u64, c: &Evidence) -> El {
             &c.ocr_text,
         ));
     }
+    if !c.reference_text.is_empty() && (!c.contextual || c.reference_text != c.ocr_text) {
+        section = section.child(transcript(
+            p,
+            "context-text",
+            tr("Text used for context"),
+            &c.reference_text,
+        ));
+    }
     section = section.child(transcript(
         p,
         "local-result",
         tr("After local context correction"),
         &c.after,
     ));
-    let terms = if c.terms.is_empty() {
-        tr("None").into()
-    } else {
-        c.terms.join(" · ")
-    };
-    section
-        .child(transcript(
-            p,
-            "terms",
-            tr("Context terms available"),
-            &terms,
+    section.child(
+        text(format!(
+            "{}: {}",
+            tr("Saved context characters at start"),
+            c.saved_context_chars
         ))
-        .child(
-            text(format!(
-                "{}: {}",
-                tr("Saved app terms at start"),
-                c.saved_terms
-            ))
-            .key("saved-terms")
-            .font(p.k.ty.small)
-            .color(p.muted())
-            .wrap(),
-        )
+        .key("saved-terms")
+        .font(p.k.ty.small)
+        .color(p.muted())
+        .wrap(),
+    )
 }

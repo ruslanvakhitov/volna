@@ -48,7 +48,7 @@ pub(super) fn section(ui: &Ui, p: Paint) -> Option<El> {
             "screen-context-enabled",
             &WAVE,
             tr("Screen context"),
-            tr("Right Command reads the screen; Option reuses this app’s dictionary"),
+            tr("Right Command reads the screen; Option reuses saved app text"),
             settings.enabled,
             |ui| update(ui, |s| s.enabled = !s.enabled),
         )
@@ -57,8 +57,8 @@ pub(super) fn section(ui: &Ui, p: Paint) -> Option<El> {
             p,
             "screen-context-learning",
             &BOOK,
-            tr("Learn app vocabulary"),
-            tr("App terms stay 30 days. Screenshots and OCR follow your History retention."),
+            tr("Remember app context"),
+            tr("Screen text stays 30 days. Screenshots follow your History retention."),
             settings.learn,
             |ui| update(ui, |s| s.learn = !s.learn),
         )
@@ -102,18 +102,21 @@ pub(super) fn section(ui: &Ui, p: Paint) -> Option<El> {
     } else {
         Vec::new()
     };
-    let total: usize = dictionaries.iter().map(|d| d.terms.len()).sum();
-    let summary = format!("{} · {}", dictionaries.len(), total);
+    let dictionaries: Vec<_> = dictionaries
+        .into_iter()
+        .filter(|d| !d.texts.is_empty())
+        .collect();
+    let summary = dictionaries.len().to_string();
     rows.push(
         icon_row(
             p,
             "screen-context-memory",
             &BOOK,
-            tr("App dictionaries"),
+            tr("Saved app context"),
             Some(if live {
-                tr("Inspect learned terms or forget an app")
+                tr("Read remembered text or forget an app")
             } else {
-                tr("Separate vocabulary for Telegram, your editor and every other app")
+                tr("Separate context for Telegram, your editor and every other app")
             }),
             button(
                 p,
@@ -132,12 +135,7 @@ pub(super) fn section(ui: &Ui, p: Paint) -> Option<El> {
         for dictionary in dictionaries {
             let scope = dictionary.scope.clone();
             let armed = ui.context.armed.as_deref() == Some(&scope);
-            let preview = dictionary
-                .terms
-                .iter()
-                .cloned()
-                .collect::<Vec<_>>()
-                .join(" · ");
+            let preview: String = dictionary.text().chars().take(500).collect();
             rows.push(
                 icon_row(
                     p,

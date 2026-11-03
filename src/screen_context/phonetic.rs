@@ -76,6 +76,10 @@ fn distance(a: &str, b: &str) -> usize {
 pub(super) fn close(heard: &str, term: &str) -> bool {
     let a = normalized(heard);
     let b = normalized(term);
+    let acronym = |s: &str| (3..=6).contains(&s.len()) && s.bytes().all(|c| c.is_ascii_uppercase());
+    if acronym(heard) && acronym(term) && a.len() == b.len() {
+        return distance(&a, &b) <= 1;
+    }
     if a.len() < 4 || b.len() < 4 || a == b {
         return a == b && a.len() >= 3;
     }

@@ -1,22 +1,6 @@
 use super::*;
 
 #[test]
-fn vocabulary_excludes_addresses_numbers_and_ui_but_keeps_names() {
-    let terms = store::extract_terms(
-        "Telegram Settings Send Привет Сегодня ConfidAI Moat8 Codex GigaAM Qwen3 example@mail.com https://secret.test 123456 Сергей Александрович",
-    );
-    assert!(terms.contains(&"ConfidAI".into()));
-    assert!(terms.contains(&"Codex".into()));
-    assert!(terms.contains(&"Сергей".into()));
-    assert!(
-        !terms
-            .iter()
-            .any(|t| t.contains('@') || t.contains("secret") || t.contains("123456"))
-    );
-    assert!(!terms.contains(&"Settings".into()));
-}
-
-#[test]
 fn ordinary_dictation_resolves_only_its_fixed_dictionary_without_ocr() {
     let session = Session(Arc::new(SessionInner {
         generation: 0,
@@ -29,17 +13,17 @@ fn ordinary_dictation_resolves_only_its_fixed_dictionary_without_ocr() {
         started: AtomicBool::new(false),
         state: Mutex::new(None),
         ready: Condvar::new(),
-        terms: vec!["ConfidAI".into()],
+        reference: "ConfidAI project".into(),
     }));
     session.start();
     assert!(!session.0.started.load(Ordering::Acquire));
-    let (screen, terms) = session.resolve();
+    let (screen, reference) = session.resolve();
     assert!(screen.text.is_empty());
-    assert_eq!(terms, vec!["ConfidAI"]);
+    assert_eq!(reference, "ConfidAI project");
 }
 
 #[test]
-fn fresh_screen_terms_precede_saved_terms_and_merge_without_duplicates() {
+fn fresh_screen_text_precedes_saved_context_and_preserves_sentences() {
     let session = Session(Arc::new(SessionInner {
         generation: 0,
         trace: Mutex::new(None),
@@ -50,15 +34,17 @@ fn fresh_screen_terms_precede_saved_terms_and_merge_without_duplicates() {
         learn: true,
         started: AtomicBool::new(true),
         state: Mutex::new(Some(ScreenText {
-            text: "ConfidAI Codex".into(),
+            text: "ConfidAI Codex\nСобытие SLP Alumni".into(),
             ..Default::default()
         })),
         ready: Condvar::new(),
-        terms: vec!["ConfidAI".into(), "Docker".into()],
+        reference: "ConfidAI Codex\nDocker project".into(),
     }));
-    let (_, terms) = session.resolve();
-    assert_eq!(terms.iter().filter(|t| t.as_str() == "ConfidAI").count(), 1);
-    assert!(terms.contains(&"Docker".into()));
+    let (_, reference) = session.resolve();
+    assert_eq!(
+        reference,
+        "ConfidAI Codex\nСобытие SLP Alumni\nDocker project"
+    );
     assert_ne!(
         session,
         Session(Arc::new(SessionInner {
@@ -72,19 +58,8 @@ fn fresh_screen_terms_precede_saved_terms_and_merge_without_duplicates() {
             started: AtomicBool::new(false),
             state: Mutex::new(None),
             ready: Condvar::new(),
-            terms: vec![],
+            reference: String::new(),
         }))
-    );
-}
-
-#[test]
-fn exact_correction_preserves_punctuation_numbers_and_partial_words() {
-    assert_eq!(
-        store::exact_spellings(
-            "открой confidai, 120 и codex-tools.",
-            &["ConfidAI".into(), "Codex".into()]
-        ),
-        "открой ConfidAI, 120 и codex-tools."
     );
 }
 
@@ -99,7 +74,7 @@ fn history_records_the_used_screen_even_when_later_state_changes() {
         started: AtomicBool::new(true),
         state: Mutex::new(None),
         ready: Condvar::new(),
-        terms: vec![],
+        reference: String::new(),
         generation: 0,
         trace: Mutex::new(None),
     }));
@@ -110,7 +85,7 @@ fn history_records_the_used_screen_even_when_later_state_changes() {
     };
     session.trace(
         &screen,
-        &["Codex".into()],
+        "Codex — developer tools",
         "кодекс 15",
         "Codex 15",
         "applied",
@@ -122,6 +97,7 @@ fn history_records_the_used_screen_even_when_later_state_changes() {
     });
     let evidence = session.history("кодекс 15").evidence;
     assert_eq!(evidence.ocr_text, "Codex");
+    assert_eq!(evidence.reference_text, "Codex — developer tools");
     assert_eq!(evidence.before, "кодекс 15");
     assert_eq!(evidence.after, "Codex 15");
     assert_eq!(evidence.application_id, "test.fixture");
@@ -138,14 +114,14 @@ fn incomplete_ocr_is_visible_as_fallback_not_a_success() {
         started: AtomicBool::new(false),
         state: Mutex::new(None),
         ready: Condvar::new(),
-        terms: vec!["Codex".into()],
+        reference: "Codex".into(),
         generation: 0,
         trace: Mutex::new(None),
     }));
-    let (screen, terms) = session.resolve();
-    session.trace(&screen, &terms, "кодекс", "кодекс", "unchanged", 0);
+    let (screen, reference) = session.resolve();
+    session.trace(&screen, &reference, "кодекс", "кодекс", "unchanged", 0);
     let draft = session.history("кодекс");
     assert!(draft.evidence.ocr_status.contains("not started"));
     assert!(draft.jpeg.is_none());
-    assert_eq!(draft.evidence.saved_terms, 1);
+    assert_eq!(draft.evidence.saved_context_chars, 5);
 }

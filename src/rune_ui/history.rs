@@ -252,8 +252,8 @@ impl HistoryPane {
             correction_ms: 350,
             before: entry.raw_text.clone(),
             after: entry.final_text.clone(),
-            terms: vec!["ConfidAI".into(), "Codex".into()],
-            saved_terms: 12,
+            reference_text: "Project discussion\nConfidAI and Codex\nMeeting at 15:00".into(),
+            saved_context_chars: 24,
             screenshot_bytes: 100,
             ..Default::default()
         });

@@ -22,6 +22,8 @@ pub struct Evidence {
     pub correction_ms: u64,
     pub before: String,
     pub after: String,
+    pub reference_text: String,
+    pub saved_context_chars: usize,
     pub terms: Vec<String>,
     pub saved_terms: usize,
     pub screenshot_bytes: u64,
@@ -34,6 +36,7 @@ impl Evidence {
         self.ocr_text = super::truncated(&self.ocr_text, super::MAX_TEXT_BYTES);
         self.before = super::truncated(&self.before, super::MAX_TEXT_BYTES);
         self.after = super::truncated(&self.after, super::MAX_TEXT_BYTES);
+        self.reference_text = super::truncated(&self.reference_text, super::MAX_TEXT_BYTES);
         self.ocr_status = super::truncated(&self.ocr_status, super::MAX_FALLBACK_BYTES);
         self.correction_status =
             super::truncated(&self.correction_status, super::MAX_FALLBACK_BYTES);
@@ -54,6 +57,7 @@ impl Evidence {
         self.ocr_text.len()
             + self.before.len()
             + self.after.len()
+            + self.reference_text.len()
             + self.terms.iter().map(String::len).sum::<usize>()
     }
 }
@@ -139,6 +143,7 @@ mod tests {
                 evidence: Evidence {
                     contextual: true,
                     ocr_text: "Codex".into(),
+                    reference_text: "Codex\nSaved project context".into(),
                     before: "кодекс 15".into(),
                     after: "Codex 15".into(),
                     ..Default::default()
@@ -184,6 +189,10 @@ mod tests {
         }
         let loaded = crate::history::read_snapshot(&history).unwrap();
         assert_eq!(loaded[0].screen_context.as_ref().unwrap().ocr_text, "Codex");
+        assert_eq!(
+            loaded[0].screen_context.as_ref().unwrap().reference_text,
+            "Codex\nSaved project context"
+        );
         store.screenshot_cap = 8;
         let second = store.record(draft(), 101).unwrap().unwrap();
         assert!(!screenshot.exists());

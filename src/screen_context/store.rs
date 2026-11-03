@@ -1,10 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::{Mutex, OnceLock};
 
 const MAX_APPS: usize = 64;
 const MAX_TERMS: usize = 256;
+const MAX_SNAPSHOTS: usize = 4;
+const MAX_SNAPSHOT_CHARS: usize = 6000;
+const MAX_APP_CHARS: usize = 12000;
 const RETENTION_SECONDS: u64 = 30 * 24 * 60 * 60;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -15,6 +18,23 @@ pub struct Dictionary {
     pub updated_at: u64,
     #[serde(default)]
     pub term_seen: BTreeMap<String, u64>,
+    #[serde(default)]
+    pub texts: Vec<TextSnapshot>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TextSnapshot {
+    pub text: String,
+    pub seen_at: u64,
+}
+
+impl Dictionary {
+    pub fn text(&self) -> String {
+        let texts = fresh_texts(self, now());
+        texts.iter().fold(String::new(), |text, item| {
+            super::reference::combine(&text, &item.text)
+        })
+    }
 }
 
 #[derive(Default, Deserialize, Serialize)]
@@ -43,7 +63,7 @@ fn store() -> &'static Mutex<Store> {
         let saved = path()
             .ok()
             .and_then(|p| std::fs::read(p).ok())
-            .filter(|b| b.len() <= 2 * 1024 * 1024)
+            .filter(|b| b.len() <= 8 * 1024 * 1024)
             .and_then(|b| serde_json::from_slice::<Store>(&b).ok())
             .unwrap_or_default();
         Mutex::new(saved)
@@ -69,6 +89,28 @@ fn fresh_terms(dictionary: &Dictionary, at: u64) -> Vec<String> {
         .cloned()
         .collect()
 }
+
+fn fresh_texts(dictionary: &Dictionary, at: u64) -> Vec<TextSnapshot> {
+    let mut remaining = MAX_APP_CHARS;
+    dictionary
+        .texts
+        .iter()
+        .filter(|item| at.saturating_sub(item.seen_at) <= RETENTION_SECONDS)
+        .take(MAX_SNAPSHOTS)
+        .filter_map(|item| {
+            let text: String = item
+                .text
+                .chars()
+                .take(remaining.min(MAX_SNAPSHOT_CHARS))
+                .collect();
+            remaining = remaining.saturating_sub(text.chars().count());
+            (!text.is_empty()).then_some(TextSnapshot {
+                text,
+                seen_at: item.seen_at,
+            })
+        })
+        .collect()
+}
 pub fn generation() -> u64 {
     store().lock().unwrap_or_else(|e| e.into_inner()).generation
 }
@@ -82,19 +124,20 @@ pub fn dictionaries() -> Vec<Dictionary> {
         .map(|d| {
             let mut d = d.clone();
             d.terms = fresh_terms(&d, now());
+            d.texts = fresh_texts(&d, now());
             d
         })
-        .filter(|d| !d.terms.is_empty())
+        .filter(|d| !d.terms.is_empty() || !d.texts.is_empty())
         .collect()
 }
-pub fn terms(scope: &str) -> Vec<String> {
+pub fn text(scope: &str) -> String {
     store()
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .apps
         .get(scope)
         .filter(|d| current(d))
-        .map(|d| fresh_terms(d, now()))
+        .map(Dictionary::text)
         .unwrap_or_default()
 }
 pub fn expire() -> Result<(), String> {
@@ -102,12 +145,16 @@ pub fn expire() -> Result<(), String> {
     let mut changed = false;
     store.apps.retain(|_, dictionary| {
         let fresh = fresh_terms(dictionary, now());
-        changed |= fresh.len() != dictionary.terms.len() || !current(dictionary);
+        let texts = fresh_texts(dictionary, now());
+        changed |= fresh.len() != dictionary.terms.len()
+            || texts.len() != dictionary.texts.len()
+            || !current(dictionary);
         dictionary.terms = fresh;
+        dictionary.texts = texts;
         dictionary
             .term_seen
             .retain(|term, _| dictionary.terms.contains(term));
-        current(dictionary) && !dictionary.terms.is_empty()
+        current(dictionary) && (!dictionary.terms.is_empty() || !dictionary.texts.is_empty())
     });
     if changed {
         save(&store)?;
@@ -115,7 +162,10 @@ pub fn expire() -> Result<(), String> {
     Ok(())
 }
 pub fn learn(scope: &str, application: &str, screen: &str, generation: u64) -> Result<(), String> {
-    let fresh = extract_terms(screen);
+    let fresh: String = super::reference::combine(screen, "")
+        .chars()
+        .take(MAX_SNAPSHOT_CHARS)
+        .collect();
     if fresh.is_empty() {
         return Ok(());
     }
@@ -125,38 +175,31 @@ pub fn learn(scope: &str, application: &str, screen: &str, generation: u64) -> R
     }
     store.apps.retain(|_, d| current(d));
     let at = now();
-    let mut seen: BTreeMap<String, u64> = fresh.iter().map(|t| (t.clone(), at)).collect();
-    let mut terms = fresh;
+    let mut dictionary = store.apps.get(scope).cloned().unwrap_or_default();
+    for term in &dictionary.terms {
+        dictionary
+            .term_seen
+            .entry(term.clone())
+            .or_insert(dictionary.updated_at);
+    }
+    let mut texts = vec![TextSnapshot {
+        text: fresh.clone(),
+        seen_at: at,
+    }];
     if let Some(previous) = store.apps.get(scope) {
-        for term in &fresh_terms(previous, at) {
-            if !terms
-                .iter()
-                .any(|t| t.to_lowercase() == term.to_lowercase())
-            {
-                seen.insert(
-                    term.clone(),
-                    previous
-                        .term_seen
-                        .get(term)
-                        .copied()
-                        .unwrap_or(previous.updated_at),
-                );
-                terms.push(term.clone());
+        for snapshot in fresh_texts(previous, at) {
+            if snapshot.text != fresh {
+                texts.push(snapshot);
             }
         }
     }
-    terms.truncate(MAX_TERMS);
-    store.version = 1;
-    store.apps.insert(
-        scope.into(),
-        Dictionary {
-            application: application.into(),
-            scope: scope.into(),
-            terms,
-            updated_at: at,
-            term_seen: seen,
-        },
-    );
+    dictionary.application = application.into();
+    dictionary.scope = scope.into();
+    dictionary.updated_at = at;
+    dictionary.texts = texts;
+    dictionary.texts = fresh_texts(&dictionary, at);
+    store.version = 2;
+    store.apps.insert(scope.into(), dictionary);
     while store.apps.len() > MAX_APPS {
         if let Some(oldest) = store
             .apps
@@ -205,116 +248,77 @@ pub(super) fn private_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     std::fs::rename(&temporary, path).map_err(|e| e.to_string())
 }
 
-/// Keep vocabulary rather than conversations: names, technical words, and
-/// identifiers. Exclude URLs, addresses, long numeric strings and common UI.
-pub(super) fn extract_terms(screen: &str) -> Vec<String> {
-    const STOP: &[&str] = &[
-        "the",
-        "and",
-        "with",
-        "this",
-        "that",
-        "from",
-        "your",
-        "have",
-        "will",
-        "file",
-        "edit",
-        "view",
-        "help",
-        "window",
-        "search",
-        "message",
-        "settings",
-        "telegram",
-        "today",
-        "yesterday",
-        "send",
-        "online",
-        "для",
-        "что",
-        "это",
-        "как",
-        "все",
-        "так",
-        "или",
-        "при",
-        "его",
-        "она",
-        "они",
-        "мне",
-        "тебя",
-        "привет",
-        "сегодня",
-        "вчера",
-        "сообщение",
-        "настройки",
-        "поиск",
-        "отправить",
-        "изменить",
-        "файл",
-        "правка",
-        "окно",
-        "справка",
-        "давай",
-        "нужно",
-        "можно",
-    ];
-    let mut seen = HashSet::new();
-    let mut scored = Vec::new();
-    for token in screen.split_whitespace().take(5000) {
-        if token.contains(['@', '/', '\\']) || token.contains("www.") {
-            continue;
-        }
-        let term = token.trim_matches(|c: char| !c.is_alphanumeric() && c != '_' && c != '-');
-        let n = term.chars().count();
-        let lower = term.to_lowercase();
-        if !(3..=48).contains(&n) || STOP.contains(&lower.as_str()) || !seen.insert(lower) {
-            continue;
-        }
-        if term.chars().filter(|c| c.is_numeric()).count() > 3
-            || term.chars().filter(|c| c.is_alphabetic()).count() < 2
-            || term.contains('.')
-        {
-            continue;
-        }
-        let capitals = term.chars().filter(|c| c.is_uppercase()).count();
-        let latin = term.chars().filter(|c| c.is_ascii_alphabetic()).count();
-        let score = if capitals >= 2 {
-            4
-        } else if latin > 0 && capitals > 0 {
-            3
-        } else if capitals > 0 && n >= 4 {
-            2
-        } else if latin >= 4 || n >= 7 {
-            1
-        } else {
-            continue;
-        };
-        scored.push((score, term.to_owned()));
-    }
-    scored.sort_by_key(|(score, _)| std::cmp::Reverse(*score));
-    scored.into_iter().map(|(_, t)| t).take(96).collect()
-}
-
-/// Exact whole-word case restoration is safe even without an LLM.
-pub(super) fn exact_spellings(text: &str, terms: &[String]) -> String {
-    let pattern = regex::Regex::new(r"[\p{L}\p{N}_-]+").unwrap();
-    pattern
-        .replace_all(text, |caps: &regex::Captures<'_>| {
-            let heard = &caps[0];
-            terms
-                .iter()
-                .find(|t| t.to_lowercase() == heard.to_lowercase())
-                .cloned()
-                .unwrap_or_else(|| heard.into())
-        })
-        .into_owned()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn plain_text_memory_expires_per_snapshot_and_replaces_legacy_keyword_context() {
+        let at = now();
+        let mut dictionary = Dictionary {
+            terms: vec!["LegacyNoise".into()],
+            updated_at: at,
+            texts: vec![
+                TextSnapshot {
+                    text: "SLP: план встречи и отчёты\nSLP сообщество".into(),
+                    seen_at: at,
+                },
+                TextSnapshot {
+                    text: "ExpiredContext".into(),
+                    seen_at: at - RETENTION_SECONDS - 1,
+                },
+            ],
+            ..Default::default()
+        };
+        assert_eq!(fresh_texts(&dictionary, at).len(), 1);
+        let text = dictionary.text();
+        assert!(text.contains("SLP сообщество"));
+        assert!(!text.contains("LegacyNoise"));
+        assert!(!text.contains("ExpiredContext"));
+        dictionary.texts.clear();
+        assert!(
+            dictionary.text().is_empty(),
+            "keyword-only data is not reused as prose"
+        );
+        assert_eq!(
+            dictionary.terms,
+            vec!["LegacyNoise"],
+            "old data is preserved"
+        );
+    }
+
+    #[test]
+    fn remembered_text_is_bounded_and_never_combined_between_apps() {
+        let at = now();
+        let telegram = Dictionary {
+            updated_at: at,
+            texts: (0..10)
+                .map(|_| TextSnapshot {
+                    text: "я".repeat(20_000),
+                    seen_at: at,
+                })
+                .collect(),
+            ..Default::default()
+        };
+        let snapshots = fresh_texts(&telegram, at);
+        assert!(snapshots.len() <= MAX_SNAPSHOTS);
+        assert!(
+            snapshots
+                .iter()
+                .map(|s| s.text.chars().count())
+                .sum::<usize>()
+                <= MAX_APP_CHARS
+        );
+        let editor = Dictionary {
+            updated_at: at,
+            texts: vec![TextSnapshot {
+                text: "Editor only".into(),
+                seen_at: at,
+            }],
+            ..Default::default()
+        };
+        assert_eq!(editor.text(), "Editor only");
+        assert!(!telegram.text().contains("Editor"));
+    }
     #[test]
     fn terms_expire_individually_even_if_an_app_keeps_being_used() {
         let at = RETENTION_SECONDS + 100;
@@ -324,6 +328,7 @@ mod tests {
             terms: vec!["Old".into(), "Fresh".into()],
             updated_at: at,
             term_seen: BTreeMap::from([("Old".into(), 1), ("Fresh".into(), at)]),
+            texts: vec![],
         };
         assert_eq!(fresh_terms(&d, at), vec!["Fresh"]);
         let apps = BTreeMap::from([

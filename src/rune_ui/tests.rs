@@ -1210,6 +1210,7 @@ fn history_context_shows_raw_final_ocr_and_screen_evidence() {
     ] {
         assert!(shown.iter().any(|s| s == expected), "missing {expected}");
     }
+    assert!(!shown.iter().any(|s| s == "Context terms available"));
     assert!(
         rt.state
             .history

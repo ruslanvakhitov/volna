@@ -7,6 +7,7 @@ mod evidence;
 mod phonetic;
 #[cfg(target_os = "macos")]
 mod probe;
+mod reference;
 #[cfg(target_os = "macos")]
 pub(crate) use probe::execute as run_probe;
 #[cfg(target_os = "macos")]
@@ -98,7 +99,7 @@ struct SessionInner {
     started: AtomicBool,
     state: Mutex<Option<ScreenText>>,
     ready: Condvar,
-    terms: Vec<String>,
+    reference: String,
     generation: u64,
     trace: Mutex<Option<crate::history::context::Draft>>,
 }
@@ -161,7 +162,7 @@ fn begin_with_learning(context: &ContextSnapshot, capture: bool, learn: bool) ->
     }
     context.application = Some(application.clone());
     context.screen = Some(Session(Arc::new(SessionInner {
-        terms: store::terms(&scope),
+        reference: store::text(&scope),
         generation: store::generation(),
         trace: Mutex::new(None),
         scope,
@@ -219,14 +220,14 @@ impl Session {
         });
         if worker.try_send(self.clone()).is_err() {
             *self.0.state.lock().unwrap_or_else(|e| e.into_inner()) = Some(ScreenText {
-                error: Some("Screen reader is busy; using the app dictionary".into()),
+                error: Some("Screen reader is busy; using saved app text".into()),
                 ..Default::default()
             });
             self.0.ready.notify_all();
         }
     }
 
-    fn resolve(&self) -> (ScreenText, Vec<String>) {
+    fn resolve(&self) -> (ScreenText, String) {
         let mut state = self.0.state.lock().unwrap_or_else(|e| e.into_inner());
         if self.0.started.load(Ordering::Acquire) && state.is_none() {
             state = self
@@ -239,21 +240,15 @@ impl Session {
         let screen = state.clone().unwrap_or_else(|| ScreenText {
             error: self.0.capture.then(|| {
                 if self.0.started.load(Ordering::Acquire) {
-                    "Screen reading did not finish before correction; saved dictionary used".into()
+                    "Screen reading did not finish before correction; saved app text used".into()
                 } else {
                     "Screen reading was not started".into()
                 }
             }),
             ..Default::default()
         });
-        let mut terms = store::extract_terms(&screen.text);
-        for term in &self.0.terms {
-            if !terms.iter().any(|t| t.eq_ignore_ascii_case(term)) {
-                terms.push(term.clone());
-            }
-        }
-        terms.truncate(96);
-        (screen, terms)
+        let reference = reference::combine(&screen.text, &self.0.reference);
+        (screen, reference)
     }
 }
 
@@ -264,7 +259,7 @@ pub fn correct(transcript: &str, context: &ContextSnapshot, cancelled: &AtomicBo
     if !settings().enabled || cancelled.load(Ordering::Acquire) {
         session.trace(
             &ScreenText::default(),
-            &[],
+            "",
             transcript,
             transcript,
             "Screen context is disabled",
@@ -276,58 +271,52 @@ pub fn correct(transcript: &str, context: &ContextSnapshot, cancelled: &AtomicBo
     if let Err(error) = store::expire() {
         tracing::warn!(%error, "Could not expire app vocabulary");
     }
-    let (screen, terms) = session.resolve();
+    let (screen, reference) = session.resolve();
     if let Some(error) = &screen.error {
         engine::set_note(error);
     }
-    if terms.is_empty() {
+    if reference.is_empty() {
         session.trace(
             &screen,
-            &terms,
+            &reference,
             transcript,
             transcript,
-            "No context terms available; transcript unchanged",
+            "No screen or saved text available; transcript unchanged",
             0,
         );
         return transcript.into();
     }
-    let corrected = store::exact_spellings(transcript, &terms);
     if !settings().rewrite {
         session.trace(
             &screen,
-            &terms,
+            &reference,
             transcript,
-            &corrected,
-            "Local model is off; dictionary spelling only",
+            transcript,
+            "Local correction is off; transcript unchanged",
             0,
         );
-        return corrected;
+        return transcript.into();
     }
-    if transcript.chars().count() > 5000 || phonetic::candidates(&corrected, &terms).is_empty() {
-        let status = if transcript.chars().count() > 5000 {
-            "Transcript exceeds local model limit; dictionary spelling only"
-        } else {
-            "No phonetic candidates; dictionary spelling only"
-        };
+    if transcript.chars().count() > 5000 {
         session.trace(
             &screen,
-            &terms,
+            &reference,
             transcript,
-            &corrected,
-            status,
+            transcript,
+            "Transcript exceeds local model limit; transcript unchanged",
             started.elapsed().as_millis() as u64,
         );
-        return corrected;
+        return transcript.into();
     }
-    match engine::correct(&corrected, &screen.text, &terms, cancelled) {
+    match engine::correct(transcript, &reference, cancelled) {
         Ok(text) => {
             session.trace(
                 &screen,
-                &terms,
+                &reference,
                 transcript,
                 &text,
                 if text == transcript {
-                    "Qwen checked candidates and kept the transcript unchanged"
+                    "No spelling changes selected from reference text"
                 } else {
                     "Context spelling corrections applied"
                 },
@@ -336,7 +325,7 @@ pub fn correct(transcript: &str, context: &ContextSnapshot, cancelled: &AtomicBo
             tracing::info!(
                 latency_ms = started.elapsed().as_millis() as u64,
                 ocr_ms = screen.elapsed_ms,
-                terms = terms.len(),
+                context_chars = reference.chars().count(),
                 "Volna applied local screen context"
             );
             text
@@ -344,14 +333,14 @@ pub fn correct(transcript: &str, context: &ContextSnapshot, cancelled: &AtomicBo
         Err(error) => {
             session.trace(
                 &screen,
-                &terms,
+                &reference,
                 transcript,
-                &corrected,
+                transcript,
                 &error,
                 started.elapsed().as_millis() as u64,
             );
             engine::set_note(&error);
-            corrected
+            transcript.into()
         }
     }
 }
@@ -438,18 +427,18 @@ fn capture_screen(pid: i32) -> ScreenText {
 #[cfg(target_os = "macos")]
 #[derive(clap::Subcommand)]
 pub enum Command {
-    /// Show local OCR, engine, and dictionary status (no screen capture).
+    /// Show local OCR, engine, and app-context status (no screen capture).
     Status,
-    /// List learned application dictionaries.
+    /// List remembered application text (also preserves legacy dictionaries).
     Dictionaries,
     /// Test OCR against a supplied image; does not capture the screen or learn.
     Ocr { image: std::path::PathBuf },
     /// Test the running app's real capture/correction path. No history is saved.
     Probe {
-        /// Test saved app vocabulary without taking a screenshot (like Option).
+        /// Test saved app text without taking a screenshot (like Option).
         #[arg(long)]
         dictionary: bool,
-        /// Permit this explicit probe to learn terms, like Right Command.
+        /// Permit this explicit probe to remember text, like Right Command.
         #[arg(long)]
         learn: bool,
         #[arg(long, default_value = "")]
@@ -460,7 +449,7 @@ pub enum Command {
         transcript: String,
         #[arg(long, default_value = "")]
         screen: String,
-        /// Reuse this application's saved vocabulary without taking a screenshot.
+        /// Reuse this application's saved text without taking a screenshot.
         #[arg(long)]
         application: Option<String>,
     },
@@ -505,15 +494,9 @@ pub fn run(command: &Command) -> color_eyre::Result<()> {
             screen,
             application,
         } => {
-            let mut terms = store::extract_terms(screen);
-            if let Some(application) = application {
-                for term in store::terms(application) {
-                    if !terms.contains(&term) {
-                        terms.push(term);
-                    }
-                }
-            }
-            let result = engine::correct(transcript, screen, &terms, &AtomicBool::new(false));
+            let saved = application.as_deref().map(store::text).unwrap_or_default();
+            let reference = reference::combine(screen, &saved);
+            let result = engine::correct(transcript, &reference, &AtomicBool::new(false));
             shutdown();
             println!("{}", result.map_err(|e| color_eyre::eyre::eyre!(e))?);
         }

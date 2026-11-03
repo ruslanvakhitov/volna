@@ -6,7 +6,7 @@ impl Session {
     pub(super) fn trace(
         &self,
         screen: &ScreenText,
-        terms: &[String],
+        reference: &str,
         before: &str,
         after: &str,
         status: &str,
@@ -19,7 +19,7 @@ impl Session {
             .and_then(|s| STANDARD.decode(s).ok())
             .map(Arc::<[u8]>::from);
         let ocr_status = if !self.0.capture {
-            "Option: saved application dictionary; no screenshot requested".into()
+            "Option: saved application text; no screenshot requested".into()
         } else if let Some(error) = &screen.error {
             error.clone()
         } else if screen.text.is_empty() {
@@ -38,8 +38,8 @@ impl Session {
                 correction_ms: ms,
                 before: before.into(),
                 after: after.into(),
-                terms: terms.to_vec(),
-                saved_terms: self.0.terms.len(),
+                reference_text: reference.into(),
+                saved_context_chars: self.0.reference.chars().count(),
                 screenshot_note: screen.screenshot_note.clone(),
                 ..Default::default()
             },
@@ -68,7 +68,7 @@ impl Session {
         }
         self.trace(
             &screen,
-            &self.0.terms,
+            &self.0.reference,
             raw,
             raw,
             "Correction was bypassed for this dictation",
