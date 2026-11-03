@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import Vision
+import CoreML
 import ScreenCaptureKit
 import ImageIO
 
@@ -25,9 +26,16 @@ private func recognize(_ image: CGImage) throws -> OCRResult {
     request.recognitionLevel = .accurate
     let supported = try request.supportedRecognitionLanguages()
     request.recognitionLanguages = ["ru-RU", "en-US"].filter { supported.contains($0) }
-    request.automaticallyDetectsLanguage = true
+    request.automaticallyDetectsLanguage = false
     request.usesLanguageCorrection = false
     request.minimumTextHeight = 0.006
+    // Automatic routing stalled in ANE model loading on the live Mac.
+    // Explicit GPU routing read the same frame in 450 ms; keep CPU fallback.
+    for (stage, devices) in try request.supportedComputeStageDevices {
+        let preferred = devices.first { if case .gpu = $0 { return true }; return false }
+            ?? devices.first { if case .cpu = $0 { return true }; return false }
+        if let preferred = preferred { request.setComputeDevice(preferred, for: stage) }
+    }
     try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
     let text = (request.results ?? []).compactMap { observation -> String? in
         guard let value = observation.topCandidates(1).first, value.confidence >= 0.35 else { return nil }

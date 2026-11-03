@@ -91,3 +91,10 @@ audio, paste or History writes. It does not learn unless `--learn` is supplied;
 `--dictionary` tests the Option path, and `--transcript TEXT` tests correction.
 Run it with the intended app in front. Both commands use the authenticated
 owner-only local API.
+
+Stack sampling of the isolated reader showed waiting in AppleNeuralEngine model
+loading. Explicit per-stage GPU selection read the same Telegram image in
+450 ms; CPU-only recognition took 3.6 s. The reader now prefers a supported GPU
+device, falls back to CPU and uses explicit Russian/English languages rather
+than automatic language detection. The subprocess alone did not cure the ANE
+loading stall.
